@@ -125,7 +125,10 @@ Then open `https://Maaz2006.pythonanywhere.com/` in a browser and sign in.
 
 ## 8. Deploying later updates
 
+Open a **new** Bash console (consoles do not remember the virtualenv), then:
+
 ```bash
+workon kito
 cd ~/child-wellness
 git pull
 pip install -r requirements.txt
@@ -135,6 +138,15 @@ python manage.py collectstatic --noinput
 
 Then **Reload** in the Web tab. Reload is required every time — changes to disk
 are not picked up by the running process.
+
+`workon kito` is the step that is easy to forget. Without it, `python` resolves
+to the system interpreter, which does not have your dependencies, and you get
+`ModuleNotFoundError: No module named 'django'`. If `workon` itself is not
+found, run `source ~/.bashrc` first, or activate directly:
+
+```bash
+source ~/.virtualenvs/kito/bin/activate
+```
 
 ---
 
