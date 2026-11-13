@@ -29,6 +29,27 @@ resolution.
   by `manage.py seed_demo`.
 - **No user file uploads anywhere.** Emoji avatars, print-to-PDF exports.
 
+## How access works
+
+Access is decided in two layers, and both are enforced server-side:
+
+1. **Page gate** — `core/permissions.MATRIX` maps
+   `(role, relationship) × resource → Access`. The role alone is never
+   sufficient: a mentor with no assignment to a child gets nothing, and a
+   guardian whose consent was withdrawn gets nothing either. Views inherit
+   `core.mixins.ChildScopedMixin`, which resolves the child from the URL and
+   refuses before the view body runs. Denials are audited.
+2. **Row gate** — `domains/access.entries_for` decides which *individual
+   records* a permitted user may see. A mentor has `SUMMARY` on emotional
+   wellness, so they see staff observations and check-ins the child chose to
+   share — never private ones. Free text is filtered again per row by
+   `note_visible_to`, so seeing a rating never implies seeing the note.
+
+A consequence worth stating explicitly: a child account has `WRITE` on its own
+emotional data, but the row gate still hides every adult observation about
+them. Being allowed to write is not the same as being allowed to read, and the
+platform does not conflate the two.
+
 ## Local development
 
 ```powershell

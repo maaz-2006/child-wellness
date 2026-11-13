@@ -1,0 +1,30 @@
+<thead>
+  <tr>
+    <th scope="col">Date</th>
+    <th scope="col">Sleep</th>
+    <th scope="col">Activity</th>
+    <th scope="col">Screen</th>
+    <th scope="col">Nutrition</th>
+    <th scope="col">Breakfast</th>
+    <th scope="col">By</th>
+    <th scope="col">Note</th>
+  </tr>
+</thead>
+<tbody>
+  {% for row in rows %}
+    <tr>
+      <td class="nowrap">{{ row.entry.occurred_on|date:"j M Y" }}</td>
+      <td>{% if row.entry.sleep_hours %}{{ row.entry.sleep_hours }} h{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td>{% if row.entry.activity_minutes is not None %}{{ row.entry.activity_minutes }} min{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td>{% if row.entry.screen_minutes is not None %}{{ row.entry.screen_minutes }} min{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td>{% if row.entry.nutrition_quality %}{{ row.entry.nutrition_quality }}/5{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td>{% if row.entry.ate_breakfast is None %}<span class="muted">—</span>{% elif row.entry.ate_breakfast %}Yes{% else %}No{% endif %}</td>
+      <td>{{ row.author_label }}</td>
+      <td class="note-cell">
+        {% if row.show_note %}{{ row.note|linebreaksbr }}
+        {% elif row.has_hidden_note %}<span class="muted small">Note not shared with you</span>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+</tbody>

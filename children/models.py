@@ -105,6 +105,29 @@ class Child(models.Model):
             return "early_secondary"
         return "secondary"
 
+    @property
+    def has_consent(self) -> bool:
+        """True when at least one active guardian has consented on record.
+
+        Consent is the gate for *processing this child's data at all*, not a
+        settings toggle. Without it the platform does not invite the child to
+        share, and parents get no access (see core.permissions.resolve_relation).
+        """
+        return self.guardianships.filter(
+            is_active=True,
+            consent_granted_at__isnull=False,
+            consent_revoked_at__isnull=True,
+        ).exists()
+
+    @property
+    def active_guardianships(self):
+        """Guardian links a staff member may be shown, with consent state."""
+        return self.guardianships.filter(is_active=True).select_related("parent")
+
+    @property
+    def active_mentorships(self):
+        return self.mentorships.filter(is_active=True).select_related("mentor")
+
 
 class Guardianship(models.Model):
     """Parent/guardian link, and the consent that makes it effective."""

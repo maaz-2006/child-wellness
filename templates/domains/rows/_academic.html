@@ -1,0 +1,31 @@
+<thead>
+  <tr>
+    <th scope="col">Date</th>
+    <th scope="col">Subject</th>
+    <th scope="col">Kind</th>
+    <th scope="col">Score</th>
+    <th scope="col">Target</th>
+    <th scope="col">By</th>
+    <th scope="col">Note</th>
+  </tr>
+</thead>
+<tbody>
+  {% for row in rows %}
+    <tr>
+      <td class="nowrap">{{ row.entry.occurred_on|date:"j M Y" }}</td>
+      <td>{{ row.entry.subject }}</td>
+      <td>{{ row.entry.get_kind_display }}</td>
+      <td class="nowrap">
+        {{ row.entry.percentage }}%
+        <span class="muted small">({{ row.entry.score }}/{{ row.entry.max_score }})</span>
+      </td>
+      <td>{% if row.entry.target %}{{ row.entry.target }}%{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td>{{ row.author_label }}</td>
+      <td class="note-cell">
+        {% if row.show_note %}{{ row.note|linebreaksbr }}
+        {% elif row.has_hidden_note %}<span class="muted small">Note not shared with you</span>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+</tbody>

@@ -10,6 +10,8 @@ admin.site.index_title = "Platform configuration"
 urlpatterns = [
     path("django-admin/", admin.site.urls),
     path("", include("core.urls")),
+    path("children/", include("children.urls")),
+    path("", include("domains.urls")),
 ]
 
 # Custom error pages (DEBUG=False only, but defined unconditionally so the

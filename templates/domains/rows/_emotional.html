@@ -1,0 +1,34 @@
+<thead>
+  <tr>
+    <th scope="col">Date</th>
+    <th scope="col">Mood</th>
+    <th scope="col">Energy</th>
+    <th scope="col">Sleep</th>
+    <th scope="col">Connected</th>
+    <th scope="col">Source</th>
+    <th scope="col">By</th>
+    <th scope="col">Note</th>
+  </tr>
+</thead>
+<tbody>
+  {% for row in rows %}
+    <tr>
+      <td class="nowrap">{{ row.entry.occurred_on|date:"j M Y" }}</td>
+      <td>{{ row.entry.get_mood_display }} <span class="muted small">({{ row.entry.mood }}/5)</span></td>
+      <td>{{ row.entry.energy }}/5</td>
+      <td>{% if row.entry.sleep_quality %}{{ row.entry.sleep_quality }}/5{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td>{% if row.entry.felt_connected %}{{ row.entry.felt_connected }}/5{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td>{{ row.source_label }}</td>
+      <td>{{ row.author_label }}</td>
+      <td class="note-cell">
+        {% if row.show_note %}
+          {{ row.note|linebreaksbr }}
+        {% elif row.has_hidden_note %}
+          <span class="muted small">Note not shared with you</span>
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+</tbody>

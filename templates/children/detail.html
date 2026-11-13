@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}{{ child.full_name }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <span>{{ child.full_name }}</span>
+</nav>
+
+<header class="detail-head">
+  <span class="avatar avatar-lg" aria-hidden="true">{{ child.avatar }}</span>
+  <div class="detail-meta">
+    <p class="eyebrow">{% if is_self %}Your space{% else %}Child profile{% endif %}</p>
+    <h1>{{ child.full_name }}</h1>
+    <p class="muted">
+      {% if child.year_group %}{{ child.year_group }}{% else %}Year group not set{% endif %}
+      {% if child.age %} · age {{ child.age }}{% endif %}
+      {% if child.school %} · {{ child.school.name }}{% endif %}
+    </p>
+  </div>
+  <div class="detail-actions">
+    {% if can_checkin %}
+      <a class="btn btn-primary" href="{{ checkin_url }}">Check in</a>
+    {% endif %}
+    {% if can_observe %}
+      <a class="btn btn-quiet" href="{{ observe_url }}">Record observation</a>
+    {% endif %}
+  </div>
+</header>
+
+{% if is_self %}
+  <div class="card card-tinted">
+    <p>
+      This is your space. Your answers help the adults who look after you notice
+      when something is going on. You can choose who reads your notes.
+    </p>
+  </div>
+{% elif not has_consent and show_care_team %}
+  <div class="flash flash-warning">
+    <strong>No guardian consent on file.</strong>
+    Until consent is recorded, the guardian has no access to this child's
+    records and the child is not prompted to check in. Observations by staff are
+    still recorded, because a safeguarding concern must not depend on paperwork.
+  </div>
+{% endif %}
+
+<section class="section">
+  <div class="section-head">
+    <h2>Wellness domains</h2>
+    <span class="pill">{{ sections|length }} domains</span>
+  </div>
+
+  <div class="domain-grid">
+    {% for section in sections %}
+      <article class="domain-card">
+        <div class="domain-card-head">
+          <span class="domain-icon" aria-hidden="true">{{ section.module.icon }}</span>
+          <div>
+            <h3>{{ section.module.label }}</h3>
+            <p class="muted small">{{ section.module.description }}</p>
+          </div>
+        </div>
+
+        <p class="domain-status">
+          {% if section.mode == 'full' %}
+            <span class="badge badge-read">{{ section.mode_label }}</span>
+          {% elif section.mode == 'aggregate' %}
+            <span class="badge badge-aggregate">{{ section.mode_label }}</span>
+          {% elif section.mode == 'none' %}
+            <span class="badge badge-none">{{ section.mode_label }}</span>
+          {% else %}
+            <span class="badge badge-summary">{{ section.mode_label }}</span>
+          {% endif %}
+        </p>
+
+        {% if section.stats %}
+          <dl class="stat-list">
+            {% for stat in section.stats %}
+              <div>
+                <dt>{{ stat.label }}</dt>
+                <dd>{{ stat.value }}</dd>
+              </div>
+            {% endfor %}
+          </dl>
+        {% elif section.mode == 'aggregate' %}
+          <p class="muted small">{{ section.count }} records on file. Counts only at this level.</p>
+        {% elif section.mode == 'none' %}
+          <p class="muted small">
+            This role cannot see this domain for an individual child. That is a
+            permission rule, not missing data.
+          </p>
+        {% endif %}
+
+        {% if section.can_open %}
+          <a class="btn btn-quiet btn-block" href="{{ section.url }}">
+            Open {{ section.module.short_label }}
+          </a>
+        {% else %}
+          <span class="btn btn-quiet btn-block is-disabled" aria-disabled="true">Not available</span>
+        {% endif %}
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+{% if show_care_team %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Care team</h2>
+      <span class="pill">Relationships, not permissions</span>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <h3>Guardians</h3>
+        {% if guardianships %}
+          <ul class="people-list">
+            {% for link in guardianships %}
+              <li>
+                <span class="person-name">{{ link.parent.display_name }}</span>
+                <span class="person-meta">{{ link.get_label_display }}</span>
+                {% if link.has_consent %}
+                  <span class="badge badge-read">Consent on file</span>
+                {% else %}
+                  <span class="badge badge-none">No consent</span>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">No guardian linked.</p>
+        {% endif %}
+      </div>
+
+      <div class="card">
+        <h3>Mentors</h3>
+        {% if mentorships %}
+          <ul class="people-list">
+            {% for link in mentorships %}
+              <li>
+                <span class="person-name">{{ link.mentor.display_name }}</span>
+                <span class="person-meta">{{ link.get_role_display }}</span>
+                <span class="badge badge-write">Active</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">No mentor assigned.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <p class="muted small footnote">
+      Consent is an access gate, not a checkbox: without it the guardian link
+      grants nothing, immediately. Case notes and alert details are never shown
+      on this page.
+    </p>
+  </section>
+{% endif %}
+{% endblock %}

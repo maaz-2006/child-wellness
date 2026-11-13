@@ -1,0 +1,26 @@
+<thead>
+  <tr>
+    <th scope="col">Date</th>
+    <th scope="col">Dimension</th>
+    <th scope="col">Rating</th>
+    <th scope="col">Context</th>
+    <th scope="col">By</th>
+    <th scope="col">Note</th>
+  </tr>
+</thead>
+<tbody>
+  {% for row in rows %}
+    <tr>
+      <td class="nowrap">{{ row.entry.occurred_on|date:"j M Y" }}</td>
+      <td>{{ row.entry.get_dimension_display }}</td>
+      <td>{{ row.entry.rating }}/5</td>
+      <td>{{ row.entry.get_context_display }}</td>
+      <td>{{ row.author_label }}</td>
+      <td class="note-cell">
+        {% if row.show_note %}{{ row.note|linebreaksbr }}
+        {% elif row.has_hidden_note %}<span class="muted small">Note not shared with you</span>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+</tbody>

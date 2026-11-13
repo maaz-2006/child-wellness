@@ -61,7 +61,7 @@
   {% if children_visible %}
     <div class="card-grid">
       {% for child in children_visible %}
-        <article class="child-card">
+        <a class="child-card" href="{% url 'children:detail' child.pk %}">
           <span class="avatar" aria-hidden="true">{{ child.avatar }}</span>
           <div class="child-meta">
             <h3>{{ child.full_name }}</h3>
@@ -70,7 +70,7 @@
               {% if child.age %} · age {{ child.age }}{% endif %}
             </p>
           </div>
-        </article>
+        </a>
       {% endfor %}
     </div>
   {% else %}

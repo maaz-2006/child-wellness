@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Check in · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <p class="eyebrow">Daily check-in</p>
+  <h1>{% if blocked %}Let's pause for a moment{% elif editing %}Today's check-in{% else %}How are you today, {{ child.short_name }}?{% endif %}</h1>
+  <p class="muted">{{ today|date:"l j F Y" }}</p>
+</header>
+
+{% if blocked %}
+  <div class="empty">
+    <p class="empty-mark" aria-hidden="true">○</p>
+    <h3>Check-ins are not switched on yet</h3>
+    <p class="muted">
+      A grown-up needs to agree to you using {{ platform_name }} first. Nothing
+      has gone wrong, and nothing you would have written has been saved.
+    </p>
+    <p><a class="btn btn-quiet" href="{{ dashboard_url }}">Back to your space</a></p>
+  </div>
+{% else %}
+  <form method="post" class="card form-card" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="flash flash-error">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="stack">
+      {% include "domains/_field.html" with field=form.mood %}
+      {% include "domains/_field.html" with field=form.energy %}
+
+      <div class="two-col">
+        {% include "domains/_field.html" with field=form.sleep_quality %}
+        {% include "domains/_field.html" with field=form.felt_connected %}
+      </div>
+
+      {% include "domains/_field.html" with field=form.note %}
+      {% include "domains/_field.html" with field=form.note_visibility %}
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit">
+        {% if editing %}Update my check-in{% else %}Save my check-in{% endif %}
+      </button>
+      <a class="btn btn-quiet" href="{{ emotional_url }}">My past check-ins</a>
+    </div>
+
+    <p class="muted small">
+      Your answers are saved with today's date. Checking in again today replaces
+      this entry rather than adding a second one.
+    </p>
+  </form>
+{% endif %}
+{% endblock %}

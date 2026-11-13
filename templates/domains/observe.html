@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Record observation · {{ child.full_name }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ back_url }}">{{ child.full_name }}</a>
+  <span aria-hidden="true">/</span>
+  <span>Record observation</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">Emotional wellness · adult observation</p>
+  <h1>What did you notice?</h1>
+  <p class="muted">
+    You are recording an observation about {{ child.full_name }}. The ratings
+    and the note are separate: staff can see the rating, and the note follows the
+    sharing choice you make below.
+  </p>
+</header>
+
+<div class="card card-tinted">
+  <p class="small">
+    An observation is not a diagnosis. Record what you saw and when; the platform
+    decides whether a pattern is worth raising, and a named person decides what
+    happens next.
+  </p>
+</div>
+
+<form method="post" class="card form-card" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="flash flash-error">
+      {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="stack">
+    {% include "domains/_field.html" with field=form.occurred_on %}
+    {% include "domains/_field.html" with field=form.mood %}
+    {% include "domains/_field.html" with field=form.energy %}
+
+    <div class="two-col">
+      {% include "domains/_field.html" with field=form.sleep_quality %}
+      {% include "domains/_field.html" with field=form.felt_connected %}
+    </div>
+
+    {% include "domains/_field.html" with field=form.note %}
+    {% include "domains/_field.html" with field=form.note_visibility %}
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Save observation</button>
+    <a class="btn btn-quiet" href="{{ back_url }}">Cancel</a>
+  </div>
+
+  <p class="muted small">
+    Guard against writing anything here you would not be comfortable defending to
+    the child, their guardian, or the person responsible for safeguarding.
+  </p>
+</form>
+{% endblock %}

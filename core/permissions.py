@@ -42,6 +42,14 @@ class Access(IntEnum):
 class Resource:
     PROFILE = "profile"
     EMOTIONAL = "emotional"
+    #: What an adult records *about* a child's emotional state.
+    #:
+    #: This is deliberately a different resource from EMOTIONAL. A mentor needs
+    #: to be able to write "seemed withdrawn at break time" without thereby
+    #: gaining the right to read the child's own private check-ins. Collapsing
+    #: the two into one WRITE grant is the mistake that makes "the teacher can
+    #: see your diary" possible, so the matrix keeps them apart.
+    EMOTIONAL_OBSERVATION = "emotional_observation"
     ACADEMIC = "academic"
     SOCIAL = "social"
     HABITS = "habits"
@@ -71,6 +79,10 @@ MATRIX: dict[tuple[str, str], dict[str, Access]] = {
     (Role.PARENT, Relation.OWN): {
         Resource.PROFILE: Access.READ,
         Resource.EMOTIONAL: Access.READ,
+        # A guardian observes their own child at home, so they can record an
+        # observation. Writing an observation does not grant access to anyone
+        # else's.
+        Resource.EMOTIONAL_OBSERVATION: Access.WRITE,
         Resource.ACADEMIC: Access.READ,
         Resource.SOCIAL: Access.READ,
         Resource.HABITS: Access.READ,
@@ -91,6 +103,7 @@ MATRIX: dict[tuple[str, str], dict[str, Access]] = {
         # Emotional check-ins: trend and score, plus entries the child chose to
         # share. Never private free-text. Enforced again at queryset level.
         Resource.EMOTIONAL: Access.SUMMARY,
+        Resource.EMOTIONAL_OBSERVATION: Access.WRITE,
         Resource.ACADEMIC: Access.WRITE,
         Resource.SOCIAL: Access.WRITE,
         Resource.HABITS: Access.WRITE,
@@ -110,6 +123,7 @@ MATRIX: dict[tuple[str, str], dict[str, Access]] = {
     (Role.CHILD, Relation.SELF): {
         Resource.PROFILE: Access.READ,
         Resource.EMOTIONAL: Access.WRITE,
+        Resource.EMOTIONAL_OBSERVATION: Access.NONE,
         Resource.ACADEMIC: Access.SUMMARY,
         Resource.SOCIAL: Access.SUMMARY,
         Resource.HABITS: Access.WRITE,
@@ -129,6 +143,7 @@ MATRIX: dict[tuple[str, str], dict[str, Access]] = {
     (Role.ADMIN, Relation.INSTITUTION): {
         Resource.PROFILE: Access.MANAGE,
         Resource.EMOTIONAL: Access.NONE,
+        Resource.EMOTIONAL_OBSERVATION: Access.NONE,
         Resource.ACADEMIC: Access.AGGREGATE,
         Resource.SOCIAL: Access.AGGREGATE,
         Resource.HABITS: Access.AGGREGATE,
@@ -148,6 +163,7 @@ MATRIX: dict[tuple[str, str], dict[str, Access]] = {
 AUDITED_RESOURCES = {
     Resource.PROFILE,
     Resource.EMOTIONAL,
+    Resource.EMOTIONAL_OBSERVATION,
     Resource.ACADEMIC,
     Resource.SOCIAL,
     Resource.HABITS,
@@ -307,6 +323,7 @@ def matrix_rows() -> list[MatrixRow]:
 RESOURCE_LABELS = {
     Resource.PROFILE: "Profile",
     Resource.EMOTIONAL: "Emotional wellness",
+    Resource.EMOTIONAL_OBSERVATION: "Emotional observations",
     Resource.ACADEMIC: "Academic progress",
     Resource.SOCIAL: "Social development",
     Resource.HABITS: "Healthy habits",

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ module.label }} · {{ child.full_name }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ back_url }}">{{ child.full_name }}</a>
+  <span aria-hidden="true">/</span>
+  <span>{{ module.label }}</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">{{ module.icon }} {{ module.label }}</p>
+  <h1>{% if user.role == role_child %}Your {{ module.short_label|lower }}{% else %}{{ child.full_name }} · {{ module.short_label }}{% endif %}</h1>
+  <p class="muted">{{ module.description }}</p>
+</header>
+
+{% if can_checkin or can_observe %}
+  <div class="action-row">
+    {% if can_checkin %}
+      <a class="btn btn-primary" href="{% url 'domains:checkin' %}">Check in today</a>
+    {% endif %}
+    {% if can_observe %}
+      <a class="btn" href="{{ observe_url }}">Record an observation</a>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if mode == 'shared' %}
+  <div class="card card-tinted">
+    <p>
+      You see observations staff have recorded and check-ins this child chose to
+      share. Private check-ins and private notes are not available at this
+      access level; the summary figures below are computed from the whole
+      record.
+    </p>
+  </div>
+{% elif mode == 'summary' %}
+  <div class="card card-tinted">
+    <p>
+      This is a summary view. Individual records are held by the people who
+      support this child; the figures below are derived from them.
+    </p>
+  </div>
+{% elif mode == 'aggregate' %}
+  <div class="card card-tinted">
+    <p>
+      Aggregate view: counts only. Individual records are not available to this
+      role.
+    </p>
+  </div>
+{% endif %}
+
+{% if stats %}
+  <section class="section">
+    <div class="stat-grid">
+      {% for stat in stats %}
+        <article class="stat">
+          <p class="stat-label">{{ stat.label }}</p>
+          <p class="stat-value">{{ stat.value }}</p>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head">
+    <h2>
+      {% if rows %}Recent {{ module.entry_noun_plural }}{% else %}{{ module.entry_noun_plural|capfirst }}{% endif %}
+    </h2>
+    <span class="pill">{{ total }} on file</span>
+  </div>
+
+  {% if rows %}
+    <div class="card table-wrap">
+      <table class="table">
+        {% include module.row_template %}
+      </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+      <nav class="pagination" aria-label="Pagination">
+        {% if page_obj.has_previous %}
+          <a class="btn btn-quiet btn-sm" href="?page={{ page_obj.previous_page_number }}">Newer</a>
+        {% endif %}
+        <span class="muted small">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a class="btn btn-quiet btn-sm" href="?page={{ page_obj.next_page_number }}">Older</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="empty">
+      <p class="empty-mark" aria-hidden="true">○</p>
+      <h3>No {{ module.entry_noun_plural }} to show</h3>
+      <p class="muted">
+        {% if mode == 'shared' or mode == 'summary' %}
+          Nothing has been shared with you, and no staff observation exists yet.
+        {% elif mode == 'aggregate' or mode == 'none' %}
+          Individual records are not available to this role.
+        {% elif user.role == role_child %}
+          You have not added anything yet.
+        {% else %}
+          Nothing recorded for this child yet.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -29,6 +29,12 @@
              href="{% url 'core:dashboard' %}">
             <span aria-hidden="true">◎</span> Dashboard
           </a>
+          {% if user.role == role_child %}
+            <a class="nav-item {% if request.resolver_match.url_name == 'checkin' %}is-active{% endif %}"
+               href="{% url 'domains:checkin' %}">
+              <span aria-hidden="true">✎</span> Check in
+            </a>
+          {% endif %}
           {% if is_platform_admin %}
             <a class="nav-item {% if request.resolver_match.url_name == 'permission_matrix' %}is-active{% endif %}"
                href="{% url 'core:permission_matrix' %}">
