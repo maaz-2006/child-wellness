@@ -34,13 +34,23 @@ resolution.
 ```powershell
 py -3.14 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 python manage.py migrate
-python manage.py seed_demo          # synthetic cohort (added in the next step)
+python manage.py seed_demo          # synthetic cohort, 24 children / 84 days
 python manage.py runserver
 ```
 
-Then open http://127.0.0.1:8000/ and sign in with a seeded account.
+Then open http://127.0.0.1:8000/. Demo accounts all use `kito-demo-2026`;
+`seed_demo` prints examples of each role.
+
+Useful commands:
+
+| Command | Purpose |
+|---|---|
+| `python manage.py seed_demo --reset` | Rebuild the synthetic cohort |
+| `python manage.py cohort_report` | Verify the archetypes behave differently |
+| `python scripts/check_compat.py` | Fail if anything needs > Python 3.13 |
+| `python manage.py check --deploy` | Security posture under production settings |
 
 ## Layout
 

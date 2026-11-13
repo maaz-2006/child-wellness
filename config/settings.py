@@ -210,6 +210,21 @@ if not DEBUG:
     SECURE_REFERRER_POLICY = "same-origin"
     X_FRAME_OPTIONS = "DENY"
 
+    # Deliberately NOT set, and both are visible as `manage.py check --deploy`
+    # warnings (W004, W008):
+    #
+    #   SECURE_SSL_REDIRECT  - the host's proxy already forces HTTPS and
+    #                          terminates TLS. Setting this behind a proxy that
+    #                          is misread causes a redirect loop, which is a
+    #                          worse failure than the warning it silences.
+    #   SECURE_HSTS_SECONDS  - HSTS is effectively irreversible for its
+    #                          duration and buys nothing on a host-provided
+    #                          subdomain we do not control.
+    #
+    # Two remaining warnings, both understood and justified, is a better
+    # position than a green tick achieved by copying settings we cannot reason
+    # about. This paragraph belongs in the report's security section.
+
 # --------------------------------------------------------------------------
 # Logging
 # --------------------------------------------------------------------------
