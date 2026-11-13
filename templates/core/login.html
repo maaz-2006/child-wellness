@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · {{ platform_name }}</title>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="auth-body">
+  <main class="auth-wrap">
+    <section class="auth-card">
+      <div class="auth-brand">
+        <span class="brand-mark lg" aria-hidden="true">🌱</span>
+        <h1>{{ platform_name }}</h1>
+        <p class="muted">{{ platform_tagline }}</p>
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="flash flash-error" role="alert">
+          {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" novalidate class="stack">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div class="field">
+          <label for="{{ form.username.id_for_label }}">Username</label>
+          <input
+            type="text"
+            name="{{ form.username.html_name }}"
+            id="{{ form.username.id_for_label }}"
+            value="{{ form.username.value|default:'' }}"
+            autocomplete="username"
+            autofocus
+            required
+            {% if form.username.errors %}aria-invalid="true" aria-describedby="username-error"{% endif %}>
+          {% for error in form.username.errors %}<p class="field-error" id="username-error">{{ error }}</p>{% endfor %}
+        </div>
+
+        <div class="field">
+          <label for="{{ form.password.id_for_label }}">Password</label>
+          <input
+            type="password"
+            name="{{ form.password.html_name }}"
+            id="{{ form.password.id_for_label }}"
+            autocomplete="current-password"
+            required
+            {% if form.password.errors %}aria-invalid="true" aria-describedby="password-error"{% endif %}>
+          {% for error in form.password.errors %}<p class="field-error" id="password-error">{{ error }}</p>{% endfor %}
+        </div>
+
+        <button class="btn btn-primary btn-block" type="submit">Sign in</button>
+      </form>
+
+      <p class="auth-note muted">
+        Access is limited to the children you are linked to. Every sign-in is recorded.
+      </p>
+    </section>
+  </main>
+</body>
+</html>

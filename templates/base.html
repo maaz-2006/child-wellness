@@ -1,0 +1,74 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ platform_name }}{% endblock %}</title>
+  <meta name="description" content="{{ platform_name }} — {{ platform_tagline }}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="{% url 'core:dashboard' %}">
+        <span class="brand-mark" aria-hidden="true">🌱</span>
+        <span class="brand-text">
+          <strong>{{ platform_name }}</strong>
+          <small>{{ platform_tagline }}</small>
+        </span>
+      </a>
+
+      {% if user.is_authenticated %}
+        <nav class="nav" aria-label="Main">
+          <a class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}is-active{% endif %}"
+             href="{% url 'core:dashboard' %}">
+            <span aria-hidden="true">◎</span> Dashboard
+          </a>
+          {% if is_platform_admin %}
+            <a class="nav-item {% if request.resolver_match.url_name == 'permission_matrix' %}is-active{% endif %}"
+               href="{% url 'core:permission_matrix' %}">
+              <span aria-hidden="true">⛨</span> Access matrix
+            </a>
+            <a class="nav-item" href="/django-admin/">
+              <span aria-hidden="true">⚙</span> Configuration
+            </a>
+          {% endif %}
+        </nav>
+
+        <div class="sidebar-foot">
+          <div class="user-chip">
+            <span class="user-avatar" aria-hidden="true">{{ user.display_name|first|upper }}</span>
+            <span class="user-meta">
+              <strong>{{ user.display_name }}</strong>
+              <small>{{ user.get_role_display }}</small>
+            </span>
+          </div>
+          <form method="post" action="{% url 'core:logout' %}">
+            {% csrf_token %}
+            <button class="btn btn-quiet btn-block" type="submit">Sign out</button>
+          </form>
+        </div>
+      {% endif %}
+    </aside>
+
+    <main class="main" id="main">
+      {% if messages %}
+        <div class="flash-stack" role="status">
+          {% for message in messages %}
+            <div class="flash flash-{{ message.tags|default:'info' }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <script src="{% static 'js/app.js' %}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

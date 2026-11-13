@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong · {{ platform_name }}{% endblock %}
+{% block content %}
+<div class="error-page">
+  <p class="error-code">500</p>
+  <h1>Something went wrong at our end</h1>
+  <p class="muted">
+    The problem has been logged. Please try again — if it keeps happening, let a
+    member of staff know.
+  </p>
+  <p><a class="btn btn-primary" href="/">Back to the start</a></p>
+</div>
+{% endblock %}

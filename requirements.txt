@@ -1,0 +1,12 @@
+# Core web framework — 5.2 LTS, and >=5.2.8 is the first release that
+# officially supports Python 3.14, which is what we develop on locally while
+# the server runs 3.13. Loose pin so pip resolves the right wheel per platform.
+Django>=5.2.8,<5.3
+
+# Serves collected static files straight from the WSGI process, so the host
+# needs no nginx/Apache static configuration.
+whitenoise>=6.7,<7
+
+# Local .env loading during development. Harmless in production (env vars come
+# from the WSGI file instead).
+python-dotenv>=1.0,<2

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Access matrix · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1>Access control matrix</h1>
+    <p class="muted">
+      Generated directly from <code>core.permissions.MATRIX</code> — the same data
+      structure every view consults, so it cannot drift from the implementation.
+    </p>
+  </div>
+</header>
+
+<div class="legend">
+  {% for level in access_levels %}
+    <span class="badge badge-{{ level|lower }}">{{ level }}</span>
+  {% endfor %}
+  <span class="muted small">Ordered — a higher level satisfies a lower requirement.</span>
+</div>
+
+<div class="card table-wrap">
+  <table class="table matrix">
+    <thead>
+      <tr>
+        <th scope="col" class="sticky-col">Role</th>
+        <th scope="col" class="sticky-col second">Relationship</th>
+        {% for header in resource_headers %}
+          <th scope="col" class="rotate"><span>{{ header.label }}</span></th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in matrix_table %}
+        <tr>
+          <th scope="row" class="sticky-col">{{ row.role }}</th>
+          <td class="sticky-col second muted">{{ row.relation }}</td>
+          {% for cell in row.cells %}
+            <td class="cell-{{ cell.access }}">{{ cell.access|title }}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="muted small">
+  {{ row_count }} enforced grants. A summary-level grant exposes derived values
+  only; raw records require read or higher.
+</p>
+{% endblock %}

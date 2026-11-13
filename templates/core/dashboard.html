@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <p class="eyebrow">{{ user.get_role_display }}</p>
+    <h1>Good to see you, {{ user.display_name }}</h1>
+    <p class="muted">
+      {% if user.role == role_parent %}
+        The children you are the guardian of, and how they are doing.
+      {% elif user.role == role_mentor %}
+        The children currently assigned to you.
+      {% elif user.role == role_child %}
+        Your space. Check in, look after your streak.
+      {% else %}
+        Institution overview. No individual wellness content is shown at this level.
+      {% endif %}
+    </p>
+  </div>
+</header>
+
+{% if user.role == role_admin %}
+  <section class="stat-grid" aria-label="Institution statistics">
+    <article class="stat">
+      <p class="stat-label">Children</p>
+      <p class="stat-value">{{ stats.children }}</p>
+      <p class="stat-foot">active records</p>
+    </article>
+    <article class="stat">
+      <p class="stat-label">Mentors</p>
+      <p class="stat-value">{{ stats.mentors }}</p>
+      <p class="stat-foot">active accounts</p>
+    </article>
+    <article class="stat">
+      <p class="stat-label">Parents</p>
+      <p class="stat-value">{{ stats.parents }}</p>
+      <p class="stat-foot">active accounts</p>
+    </article>
+  </section>
+
+  <section class="card">
+    <h2>Privacy at this level</h2>
+    <p class="muted">
+      Administrator accounts can manage records and configuration, and see
+      aggregate trends. Emotional check-in content, individual scores and case
+      notes are not available to this role by design.
+    </p>
+    <p><a class="btn btn-quiet" href="{% url 'core:permission_matrix' %}">View the enforced access matrix</a></p>
+  </section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head">
+    <h2>
+      {% if user.role == role_child %}You{% else %}Children{% endif %}
+    </h2>
+    <span class="pill">{{ children_visible|length }} in view</span>
+  </div>
+
+  {% if children_visible %}
+    <div class="card-grid">
+      {% for child in children_visible %}
+        <article class="child-card">
+          <span class="avatar" aria-hidden="true">{{ child.avatar }}</span>
+          <div class="child-meta">
+            <h3>{{ child.full_name }}</h3>
+            <p class="muted">
+              {% if child.year_group %}{{ child.year_group }}{% else %}Year group not set{% endif %}
+              {% if child.age %} · age {{ child.age }}{% endif %}
+            </p>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-mark" aria-hidden="true">○</p>
+      <h3>Nothing to show yet</h3>
+      <p class="muted">
+        {% if user.role == role_parent %}
+          Your account is not linked to a child record with recorded consent yet.
+          A member of staff can link you and record consent.
+        {% elif user.role == role_mentor %}
+          No children are assigned to you yet.
+        {% elif user.role == role_child %}
+          Your profile is still being set up.
+        {% else %}
+          No child records exist yet.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+</section>
+
+{% if user.role == role_admin and not children_visible %}
+  <p class="muted small">Tip: run <code>python manage.py seed_demo</code> to create a realistic synthetic cohort.</p>
+{% endif %}
+{% endblock %}

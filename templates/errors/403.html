@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Not available · {{ platform_name }}{% endblock %}
+{% block content %}
+<div class="error-page">
+  <p class="error-code">403</p>
+  <h1>That information isn't available to your account</h1>
+  <p class="muted">
+    Access is limited to the children you are linked to and the parts of their
+    record your role covers. If you believe you should be able to see this, ask
+    a member of staff to check the link on your account.
+  </p>
+  <p><a class="btn btn-primary" href="{% url 'core:dashboard' %}">Back to dashboard</a></p>
+</div>
+{% endblock %}

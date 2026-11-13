@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Not found · {{ platform_name }}{% endblock %}
+{% block content %}
+<div class="error-page">
+  <p class="error-code">404</p>
+  <h1>We couldn't find that page</h1>
+  <p class="muted">The link may be out of date, or the record may have moved.</p>
+  <p><a class="btn btn-primary" href="{% url 'core:dashboard' %}">Back to dashboard</a></p>
+</div>
+{% endblock %}
