@@ -99,6 +99,11 @@
         {% else %}
           <span class="btn btn-quiet btn-block is-disabled" aria-disabled="true">Not available</span>
         {% endif %}
+        {% if section.can_add %}
+          <a class="btn btn-quiet btn-block" href="{{ section.add_url }}">
+            Add {{ section.module.entry_noun }}
+          </a>
+        {% endif %}
       </article>
     {% endfor %}
   </div>

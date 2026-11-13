@@ -16,10 +16,13 @@
   <p class="muted">{{ module.description }}</p>
 </header>
 
-{% if can_checkin or can_observe %}
+{% if can_checkin or can_observe or can_add %}
   <div class="action-row">
     {% if can_checkin %}
       <a class="btn btn-primary" href="{% url 'domains:checkin' %}">Check in today</a>
+    {% endif %}
+    {% if can_add %}
+      <a class="btn btn-primary" href="{{ add_url }}">Add {{ module.entry_noun }}</a>
     {% endif %}
     {% if can_observe %}
       <a class="btn" href="{{ observe_url }}">Record an observation</a>

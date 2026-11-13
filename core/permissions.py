@@ -85,7 +85,10 @@ MATRIX: dict[tuple[str, str], dict[str, Access]] = {
         Resource.EMOTIONAL_OBSERVATION: Access.WRITE,
         Resource.ACADEMIC: Access.READ,
         Resource.SOCIAL: Access.READ,
-        Resource.HABITS: Access.READ,
+        # Sleep, screen time and breakfast are observed at home, so a guardian
+        # logs them. WRITE does not widen reading: they already have READ on
+        # this domain, and the row gate still hides other children's logs.
+        Resource.HABITS: Access.WRITE,
         Resource.SCORE: Access.READ,
         # Parents see that a concern exists and what to do about it, but not
         # the mentor's internal case notes.

@@ -16,6 +16,11 @@ urlpatterns = [
         name="emotional_observe",
     ),
     path(
+        "children/<int:child_id>/<slug:domain_key>/new/",
+        views.DomainEntryCreateView.as_view(),
+        name="entry_create",
+    ),
+    path(
         "children/<int:child_id>/<slug:domain_key>/",
         views.DomainListView.as_view(),
         name="list",

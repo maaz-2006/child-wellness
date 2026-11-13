@@ -284,9 +284,23 @@ class HabitLog(DomainEntry):
 
     class Meta(DomainEntry.Meta):
         verbose_name = "habit log"
-        indexes = [models.Index(fields=["child", "-occurred_on"])]
+        indexes = [
+            models.Index(fields=["child", "-occurred_on"]),
+            models.Index(fields=["child", "source", "-occurred_on"]),
+        ]
+        # One log per child, per day, per *source*.
+        #
+        # Source has to be part of the key because habits are observed by more
+        # than one person: the child reports their own screen time, a guardian
+        # reports what happened at home, a mentor reports the school day. A
+        # (child, day) key would make the second reporter collide with the
+        # first - an IntegrityError in production, not a validation message.
+        # Keeping them as separate rows also preserves who said what.
         constraints = [
-            models.UniqueConstraint(fields=["child", "occurred_on"], name="uniq_habit_child_day")
+            models.UniqueConstraint(
+                fields=["child", "occurred_on", "source"],
+                name="uniq_habit_child_day_source",
+            )
         ]
 
     def __str__(self) -> str:

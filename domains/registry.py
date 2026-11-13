@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from core.permissions import Resource
 
+from .forms import AcademicRecordForm, HabitLogForm, SocialObservationForm
 from .models import AcademicRecord, AttendanceRecord, EmotionalCheckin, HabitLog, SocialObservation
 
 
@@ -31,6 +32,14 @@ class DomainModule:
     #: What one record is called, for headings and buttons.
     entry_noun: str = "record"
     entry_noun_plural: str = "records"
+    #: Form used by the generic "add an entry" view. None means the domain has
+    #: its own dedicated entry flow (emotional wellness: child check-in and
+    #: adult observation are different forms with different permissions).
+    form_class: type | None = None
+    #: True when only one record per child per day per source makes sense.
+    #: The generic create view updates the author's own row instead of adding
+    #: a second one; a different author is told the day is already covered.
+    one_per_day: bool = False
 
 
 DOMAINS: tuple[DomainModule, ...] = (
@@ -59,6 +68,7 @@ DOMAINS: tuple[DomainModule, ...] = (
         row_template="domains/rows/_academic.html",
         entry_noun="assessment",
         entry_noun_plural="assessments",
+        form_class=AcademicRecordForm,
     ),
     DomainModule(
         key="social",
@@ -72,6 +82,7 @@ DOMAINS: tuple[DomainModule, ...] = (
         row_template="domains/rows/_social.html",
         entry_noun="observation",
         entry_noun_plural="observations",
+        form_class=SocialObservationForm,
     ),
     DomainModule(
         key="habits",
@@ -85,6 +96,8 @@ DOMAINS: tuple[DomainModule, ...] = (
         row_template="domains/rows/_habits.html",
         entry_noun="daily log",
         entry_noun_plural="daily logs",
+        form_class=HabitLogForm,
+        one_per_day=True,
     ),
 )
 

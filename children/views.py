@@ -46,7 +46,14 @@ class ChildDetailView(ChildScopedMixin, TemplateView):
                     "mode": mode,
                     "mode_label": access.MODE_LABELS[mode],
                     "can_open": can_open,
+                    "can_add": module.form_class is not None
+                    and permissions.has_access(
+                        user, child, module.resource, Access.WRITE
+                    ),
                     "url": reverse("domains:list", args=[child.pk, module.key]),
+                    "add_url": reverse(
+                        "domains:entry_create", args=[child.pk, module.key]
+                    ),
                     "stats": (
                         access.summarise(
                             module.model.objects.filter(child=child), module

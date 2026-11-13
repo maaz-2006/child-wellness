@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Add {{ module.entry_noun }} · {{ child.full_name }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{% url 'children:detail' child.pk %}">{{ child.full_name }}</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ back_url }}">{{ module.short_label }}</a>
+  <span aria-hidden="true">/</span>
+  <span>Add {{ module.entry_noun }}</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">{{ module.icon }} {{ module.label }}</p>
+  <h1>Add {{ module.entry_noun }}</h1>
+  <p class="muted">
+    For {{ child.full_name }}. Measurements and the note are stored separately:
+    the numbers follow the domain's access rule, and the note follows the
+    sharing choice you make below.
+  </p>
+</header>
+
+{% if module.one_per_day %}
+  <div class="card card-tinted">
+    <p class="small">
+      One {{ module.entry_noun }} is kept per child, per day, from each kind of
+      reporter. Saving again for today updates your own entry rather than
+      creating a duplicate.
+    </p>
+  </div>
+{% endif %}
+
+<form method="post" class="card form-card" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="flash flash-error">
+      {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="stack">
+    {% for field in form %}
+      {% include "domains/_field.html" with field=field %}
+    {% endfor %}
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Save {{ module.entry_noun }}</button>
+    <a class="btn btn-quiet" href="{{ back_url }}">Cancel</a>
+  </div>
+
+  <p class="muted small">
+    Every save is recorded in the audit log with your name and the time.
+  </p>
+</form>
+{% endblock %}

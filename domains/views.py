@@ -34,6 +34,14 @@ from .forms import EmotionalCheckinForm, EmotionalObservationForm
 from .models import EmotionalCheckin, Source
 from .registry import DOMAINS, DOMAINS_BY_KEY
 
+#: Which kind of person made this entry. Derived from the role, never chosen by
+#: the user: a mentor must not be able to file a record as a parent's observation.
+SOURCE_BY_ROLE = {
+    Role.CHILD: Source.CHILD,
+    Role.PARENT: Source.PARENT,
+    Role.MENTOR: Source.MENTOR,
+}
+
 
 def _module_or_404(key: str):
     module = DOMAINS_BY_KEY.get(key)
@@ -112,6 +120,13 @@ class DomainListView(ChildScopedMixin, TemplateView):
                 "can_checkin": (
                     user.role == Role.CHILD and self.module.key == "emotional"
                 ),
+                "can_add": self.module.form_class is not None
+                and permissions.has_access(
+                    user, self.child, self.module.resource, Access.WRITE
+                ),
+                "add_url": reverse(
+                    "domains:entry_create", args=[self.child.pk, self.module.key]
+                ),
                 "observe_url": reverse(
                     "domains:emotional_observe", args=[self.child.pk]
                 ),
@@ -120,6 +135,127 @@ class DomainListView(ChildScopedMixin, TemplateView):
             }
         )
         return context
+
+
+class DomainEntryCreateView(ChildScopedMixin, View):
+    """Add a record to academic, social or habits.
+
+    One view for three domains, driven by the registry's `form_class`. Adding a
+    fourth measurable domain means adding a model, a form and a registry entry;
+    it does not mean another view with its own copy of the permission check.
+
+    Two safeguards live here rather than in the forms:
+
+    * `source` comes from the role, never from the submitted data.
+    * For one-per-day domains, re-submitting updates *your own* row for that
+      day. If someone else already logged it, you are told so and nothing is
+      overwritten - otherwise a guardian could silently replace a mentor's
+      record of the school day.
+    """
+
+    template_name = "domains/entry_form.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        self.module = _module_or_404(kwargs.get("domain_key"))
+        if self.module.form_class is None:
+            raise Http404("This domain has its own entry page.")
+        self.resource = self.module.resource
+        self.required_access = Access.WRITE
+        return super().dispatch(request, *args, **kwargs)
+
+    # -- helpers ---------------------------------------------------------
+    def _source(self) -> str:
+        return SOURCE_BY_ROLE[self.request.user.role]
+
+    def _audience(self) -> str:
+        return "child" if self.request.user.role == Role.CHILD else "adult"
+
+    def _form(self, data=None, instance=None):
+        return self.module.form_class(
+            data, instance=instance, audience=self._audience()
+        )
+
+    def _own_row_for_today(self):
+        if not self.module.one_per_day:
+            return None
+        return self.module.model.objects.filter(
+            child=self.child,
+            occurred_on=timezone.localdate(),
+            source=self._source(),
+            recorded_by=self.request.user,
+        ).first()
+
+    def _context(self, form):
+        return {
+            "form": form,
+            "module": self.module,
+            "child": self.child,
+            "back_url": reverse(
+                "domains:list", args=[self.child.pk, self.module.key]
+            ),
+        }
+
+    # -- http ------------------------------------------------------------
+    def get(self, request, *args, **kwargs):
+        return render(
+            request,
+            self.template_name,
+            self._context(self._form(instance=self._own_row_for_today())),
+        )
+
+    def post(self, request, *args, **kwargs):
+        form = self._form(request.POST)
+        if not form.is_valid():
+            return render(request, self.template_name, self._context(form))
+
+        entry = form.save(commit=False)
+        entry.child = self.child
+        entry.source = self._source()
+        entry.recorded_by = request.user
+        action = AuditLog.Action.CREATE
+
+        if self.module.one_per_day:
+            existing = self.module.model.objects.filter(
+                child=self.child,
+                occurred_on=entry.occurred_on,
+                source=entry.source,
+            ).first()
+            if existing is not None:
+                if existing.recorded_by_id != request.user.pk:
+                    who = (
+                        existing.recorded_by.display_name
+                        if existing.recorded_by_id
+                        else "Someone else"
+                    )
+                    form.add_error(
+                        None,
+                        f"{who} already logged this day. Add your own note on "
+                        "another day, or ask them to update the entry.",
+                    )
+                    return render(request, self.template_name, self._context(form))
+                # Re-bind the form to the stored row rather than assigning a pk
+                # to a fresh instance: the second carries no created_at, and an
+                # UPDATE would try to write NULL into it.
+                form = self._form(request.POST, instance=existing)
+                if not form.is_valid():
+                    return render(request, self.template_name, self._context(form))
+                entry = form.save(commit=False)
+                entry.child = self.child
+                entry.source = self._source()
+                entry.recorded_by = request.user
+                action = AuditLog.Action.UPDATE
+
+        entry.save()
+
+        record_request(
+            request,
+            action=action,
+            resource_type=self.module.resource,
+            child=self.child,
+            resource_id=str(entry.pk),
+        )
+        messages.success(request, f"{self.module.entry_noun.capitalize()} saved.")
+        return redirect("domains:list", self.child.pk, self.module.key)
 
 
 class EmotionalObservationCreateView(ChildScopedMixin, View):

@@ -50,6 +50,26 @@ emotional data, but the row gate still hides every adult observation about
 them. Being allowed to write is not the same as being allowed to read, and the
 platform does not conflate the two.
 
+## Entering data
+
+| Domain | Who writes | Shape of an entry |
+|---|---|---|
+| Emotional wellness | Child (daily check-in), mentor or guardian (observation) | 1–5 scales plus optional note |
+| Academic progress | Assigned mentor | Mark, maximum mark, optional target |
+| Social development | Assigned mentor | One dimension rated 1–5, with context |
+| Healthy habits | Child, guardian or mentor | Sleep, activity, screen time, nutrition, breakfast |
+
+Two details are deliberate:
+
+- **The reporter is derived from the role, never chosen by the form.** A mentor
+  cannot file a record as a guardian's observation. The stored `source` is what
+  the row-level gate uses later.
+- **Habits are keyed by `(child, day, source)`.** A child, a guardian and a
+  mentor may each describe the same day, and the platform keeps them as
+  separate rows rather than letting the second reporter overwrite the first.
+  Re-submitting as the same person updates your own row; a *different* person
+  is told the day is already covered.
+
 ## Local development
 
 ```powershell
