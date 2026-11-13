@@ -469,6 +469,16 @@ class Command(BaseCommand):
     def _report(self, school, children: list[Child]) -> None:
         from collections import Counter
 
+        # A Django superuser who signed up through `createsuperuser` gets the
+        # default role (parent), which would leave them unable to reach the
+        # admin views. Superuser implies administrator, so reconcile it here
+        # rather than making it a manual step that gets forgotten on deploy.
+        promoted = User.objects.filter(is_superuser=True).exclude(role=Role.ADMIN).update(
+            role=Role.ADMIN
+        )
+        if promoted:
+            self.stdout.write(f"  promoted {promoted} superuser(s) to the admin role")
+
         archetypes = Counter(c.scenario_label.archetype for c in children)
         style = self.style.SUCCESS
 
