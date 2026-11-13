@@ -27,7 +27,7 @@ import random
 from datetime import timedelta
 from decimal import Decimal
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -91,6 +91,11 @@ class Command(BaseCommand):
         parser.add_argument("--seed", type=int, default=42, help="RNG seed; same seed, same cohort.")
         parser.add_argument("--reset", action="store_true", help="Delete previous demo data first.")
         parser.add_argument(
+            "--append",
+            action="store_true",
+            help="Add another cohort alongside existing demo data instead of refusing.",
+        )
+        parser.add_argument(
             "--no-consent-ratio",
             type=float,
             default=0.1,
@@ -105,6 +110,15 @@ class Command(BaseCommand):
         self.no_consent_ratio = options["no_consent_ratio"]
         self.end = timezone.localdate()
         self.start = self.end - timedelta(days=self.days - 1)
+
+        # Seeding twice without --reset silently doubles the cohort, which then
+        # looks like "the dashboard is showing everyone twice". Refuse instead.
+        existing = Child.objects.filter(scenario_label__isnull=False).count()
+        if existing and not options["reset"] and not options["append"]:
+            raise CommandError(
+                f"{existing} demo children already exist. "
+                "Use --reset to rebuild the cohort, or --append to add another group."
+            )
 
         with transaction.atomic():
             if options["reset"]:
