@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "analytics",
     "alerts",
     "feedback",
+    "messaging",
 ]
 
 MIDDLEWARE = [

@@ -29,6 +29,9 @@
     {% if can_observe %}
       <a class="btn btn-quiet" href="{{ observe_url }}">Record observation</a>
     {% endif %}
+    {% if can_view_messages %}
+      <a class="btn btn-quiet" href="{{ messages_url }}">Messages</a>
+    {% endif %}
   </div>
 </header>
 
@@ -217,6 +220,54 @@
       {% endif %}
       <a class="btn btn-quiet" href="{{ pulse_history_url }}">Pulse history</a>
     </p>
+  </section>
+{% endif %}
+
+{% if can_view_messages %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Messages</h2>
+      <span class="pill">Adults only</span>
+    </div>
+
+    {% if message_threads %}
+      <div class="stack">
+        {% for thread in message_threads %}
+          <article class="card alert-row">
+            <div>
+              <p class="eyebrow">
+                {% if thread.is_closed %}
+                  <span class="badge badge-none">Closed</span>
+                {% else %}
+                  <span class="badge badge-open">Open</span>
+                {% endif %}
+                <span class="muted small">last message {{ thread.last_message_at|date:"j M Y, H:i" }}</span>
+              </p>
+              <h3>
+                <a href="{% url 'messaging:thread' thread.pk %}">{{ thread.subject }}</a>
+              </h3>
+            </div>
+            <a class="btn btn-quiet btn-sm" href="{% url 'messaging:thread' thread.pk %}">Open conversation</a>
+          </article>
+        {% endfor %}
+      </div>
+      <p class="action-row">
+        {% if can_start_message %}
+          <a class="btn btn-primary" href="{{ new_message_url }}">Start a conversation</a>
+        {% endif %}
+        <a class="btn btn-quiet" href="{{ messages_url }}">Open the inbox</a>
+      </p>
+    {% else %}
+      <div class="card card-tinted">
+        <p>
+          No conversations about this child yet. Messaging is between the adults
+          around the child; the child and the administrator cannot read it.
+        </p>
+        {% if can_start_message %}
+          <p><a class="btn btn-primary" href="{{ new_message_url }}">Start a conversation</a></p>
+        {% endif %}
+      </div>
+    {% endif %}
   </section>
 {% endif %}
 

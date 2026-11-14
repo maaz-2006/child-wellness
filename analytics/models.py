@@ -82,6 +82,60 @@ class BaselineStat(models.Model):
         return f"{self.child.short_name} {self.domain} baseline @ {self.as_of}: {self.mean}"
 
 
+class ModelReport(models.Model):
+    """One offline evaluation of the demonstration classifier.
+
+    This row exists for the report appendix and the administrator's methodology
+    page. It is deliberately *not* connected to a child, a score or an alert: the
+    model has no production decision path, and storing a per-child prediction
+    would turn an evaluation artefact into a label about a real person.
+
+    The metrics are leave-one-child-out figures. `coefficients` is a separate fit
+    on the whole synthetic cohort, kept only so the direction of each feature can
+    be discussed; it is not a validated model.
+    """
+
+    class Status(models.TextChoices):
+        OK = "ok", "Completed"
+        INSUFFICIENT_DATA = "insufficient_data", "Insufficient data"
+
+    as_of = models.DateField(db_index=True)
+    method_version = models.CharField(max_length=12, default="1.0")
+    status = models.CharField(
+        max_length=24, choices=Status.choices, default=Status.OK
+    )
+    algorithm = models.CharField(max_length=40, default="logistic_regression")
+    task = models.CharField(max_length=160, blank=True)
+
+    n_children = models.PositiveSmallIntegerField(default=0)
+    n_examples = models.PositiveSmallIntegerField(default=0)
+    n_positive = models.PositiveSmallIntegerField(default=0)
+    n_negative = models.PositiveSmallIntegerField(default=0)
+    folds = models.PositiveSmallIntegerField(default=0)
+    threshold = models.FloatField(default=0.5)
+    l2 = models.FloatField(default=0.05)
+
+    metrics = models.JSONField(default=dict, blank=True)
+    confusion = models.JSONField(default=dict, blank=True)
+    feature_names = models.JSONField(default=list, blank=True)
+    coefficients = models.JSONField(default=list, blank=True)
+    intercept = models.FloatField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        verbose_name = "offline model report"
+
+    def __str__(self) -> str:
+        return f"{self.algorithm} @ {self.as_of}: {self.status}"
+
+    @property
+    def has_metrics(self) -> bool:
+        return self.status == self.Status.OK and bool(self.metrics)
+
+
 class ScenarioLabel(models.Model):
     """Ground truth for the synthetic cohort.
 

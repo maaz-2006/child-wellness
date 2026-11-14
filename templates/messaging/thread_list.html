@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Messages · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <span>Messages</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">Adults around the child</p>
+  <h1>Messages</h1>
+  <p class="muted">
+    Conversations between the mentors and guardians who already share
+    responsibility for a child. Messages are append-only and audited. The child
+    and the administrator cannot read this inbox.
+  </p>
+</header>
+
+<section class="stat-grid" aria-label="Inbox summary">
+  <article class="stat">
+    <p class="stat-label">Conversations</p>
+    <p class="stat-value">{{ rows|length }}</p>
+    <p class="stat-foot">in your view</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Unread</p>
+    <p class="stat-value">{{ unread_total }}</p>
+    <p class="stat-foot">messages since your last visit</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Children</p>
+    <p class="stat-value">{{ children|length }}</p>
+    <p class="stat-foot">you can write about</p>
+  </article>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Conversations</h2>
+    <span class="pill">Append-only</span>
+  </div>
+
+  {% if rows %}
+    <div class="table-wrap card">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Child</th>
+            <th scope="col">Subject</th>
+            <th scope="col">Last message</th>
+            <th scope="col">When</th>
+            <th scope="col">Unread</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            <tr>
+              <td class="nowrap">
+                <span class="avatar avatar-sm" aria-hidden="true">{{ row.thread.child.avatar }}</span>
+                {{ row.thread.child.full_name }}
+              </td>
+              <td>
+                <a href="{% url 'messaging:thread' row.thread.pk %}"><strong>{{ row.thread.subject }}</strong></a>
+                {% if row.last %}
+                  <p class="muted small">{{ row.last.author.display_name|default:"Unknown" }}: {{ row.last.body|truncatechars:80 }}</p>
+                {% endif %}
+              </td>
+              <td class="nowrap">{{ row.thread.last_message_at|date:"j M, H:i" }}</td>
+              <td class="nowrap">{{ row.thread.last_message_at|timesince }} ago</td>
+              <td>
+                {% if row.unread %}
+                  <span class="badge badge-write">{{ row.unread }} new</span>
+                {% else %}
+                  <span class="muted small">Read</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if row.thread.is_closed %}
+                  <span class="badge badge-none">Closed</span>
+                {% else %}
+                  <span class="badge badge-open">Open</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-mark" aria-hidden="true">✉</p>
+      <h3>No conversations yet</h3>
+      <p class="muted">
+        Start one from the list below. Messaging is for the adults around a
+        child, not a replacement for the guardian pulse or a case note.
+      </p>
+    </div>
+  {% endif %}
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Start a conversation</h2>
+    <span class="pill">About one child</span>
+  </div>
+
+  {% if new_thread_urls %}
+    <div class="card-grid">
+      {% for item in new_thread_urls %}
+        <a class="child-card" href="{{ item.url }}">
+          <span class="avatar" aria-hidden="true">{{ item.child.avatar }}</span>
+          <div class="child-meta">
+            <h3>{{ item.child.full_name }}</h3>
+            <p class="muted">
+              {% if item.child.year_group %}{{ item.child.year_group }}{% else %}Year group not set{% endif %}
+            </p>
+          </div>
+          <span class="btn btn-quiet btn-sm">New message</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">
+      You have no child in your care yet. A mentor assignment or recorded
+      guardian consent is what makes a conversation possible.
+    </p>
+  {% endif %}
+</section>
+
+<section class="section">
+  <div class="card card-tinted">
+    <h2>Who can read this</h2>
+    <ul class="plain-list">
+      <li>Every mentor currently assigned to the child, and every guardian with
+        consent on file, sees the whole thread.</li>
+      <li>The child does not. Their own channel is the check-in, where they can
+        choose who reads a note.</li>
+      <li>The administrator does not. Messages about a family are not
+        configuration data.</li>
+      <li>Revoking consent or ending a mentorship removes access immediately;
+        the history stays on record.</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

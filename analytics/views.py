@@ -27,7 +27,8 @@ from core.mixins import ChildScopedMixin
 from core.models import AuditLog
 from core.permissions import Access, Resource
 
-from . import charts, scoring
+from . import charts, ml, scoring
+from .models import ModelReport
 
 
 #: Overall first, then the weighted domains in descending weight so the page
@@ -196,6 +197,93 @@ class CohortWellnessView(LoginRequiredMixin, TemplateView):
                 "method_version": scoring.METHOD_VERSION,
                 "trend_periods": scoring.TREND_PERIODS,
                 "period_days": scoring.PERIOD_DAYS,
+            }
+        )
+        return context
+
+
+class ModelReportView(LoginRequiredMixin, TemplateView):
+    """The offline classifier benchmark, for the administrator.
+
+    Aggregate only: a report holds coefficients and counts, never a child's
+    prediction. The institution gate is the same one used for cohort wellness,
+    so the role that may read cohort scores may read the evaluation of a model
+    that is not allowed to make decisions.
+    """
+
+    template_name = "analytics/model_report.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            granted = permissions.access_for_institution(request.user, Resource.SCORE)
+            if granted < Access.AGGREGATE:
+                record_request(
+                    request,
+                    action=AuditLog.Action.DENY,
+                    resource_type=Resource.SCORE,
+                    metadata={
+                        "required": Access.AGGREGATE.name,
+                        "granted": Access(granted).name,
+                        "scope": "model_report",
+                    },
+                )
+                raise PermissionDenied(
+                    "Aggregate model data is not available to your account."
+                )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        report = ModelReport.objects.first()
+
+        metric_rows = []
+        if report is not None and report.has_metrics:
+            for key, (label, description) in ml.METRIC_LABELS.items():
+                value = report.metrics.get(key)
+                metric_rows.append(
+                    {
+                        "key": key,
+                        "label": label,
+                        "description": description,
+                        "value": "n/a" if value is None else f"{value:.4f}",
+                    }
+                )
+
+        coefficient_rows = []
+        if report is not None:
+            for row in sorted(
+                report.coefficients,
+                key=lambda item: abs(item.get("weight", 0.0)),
+                reverse=True,
+            ):
+                weight = row.get("weight", 0.0)
+                coefficient_rows.append(
+                    {
+                        "label": row.get("label", row.get("name", "")),
+                        "weight": f"{weight:+.4f}",
+                        "direction": (
+                            "toward difficulty" if weight >= 0 else "toward stability"
+                        ),
+                        "weight_value": weight,
+                    }
+                )
+
+        record_request(
+            self.request,
+            action=AuditLog.Action.VIEW,
+            resource_type=Resource.SCORE,
+            metadata={"scope": "model_report"},
+        )
+        context.update(
+            {
+                "report": report,
+                "metric_rows": metric_rows,
+                "coefficient_rows": coefficient_rows,
+                "feature_count": len(ml.FEATURE_NAMES),
+                "min_examples": ml.MIN_EXAMPLES,
+                "method_version": ml.MODEL_VERSION,
+                "as_of": timezone.localdate(),
+                "cohort_url": reverse("analytics:cohort_wellness"),
             }
         )
         return context

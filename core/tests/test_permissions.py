@@ -52,9 +52,11 @@ class RelationshipTests(GateFixture):
         self.assertEqual(permissions.resolve_relation(self.parent, self.child), Relation.NONE)
 
     def test_revoked_consent_removes_access(self):
-        self.guardianship.consent_granted_at = None
+        # Granted in the past, revoked now. Access must follow the current
+        # state; a revocation that leaves the gate open is not a revocation.
         self.guardianship.consent_revoked_at = timezone.now()
-        self.guardianship.save(update_fields=["consent_granted_at", "consent_revoked_at"])
+        self.guardianship.save(update_fields=["consent_revoked_at"])
+        self.assertEqual(permissions.resolve_relation(self.parent, self.child), Relation.NONE)
         self.assertFalse(
             permissions.has_access(self.parent, self.child, Resource.PROFILE)
         )

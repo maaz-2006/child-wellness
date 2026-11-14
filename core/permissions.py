@@ -56,6 +56,14 @@ class Resource:
     SCORE = "score"
     ALERT = "alert"
     CASE_NOTE = "case_note"
+    #: Adult-to-adult stakeholder messaging.
+    #:
+    #: This is not a child support channel. A child's own channel is the
+    #: check-in and the people they already know; opening a private message
+    #: thread between an adult and a child inside a monitoring platform creates
+    #: an unmonitored space around the most vulnerable user. Both adult roles
+    #: with a relationship to the child can use it; the child and the
+    #: administrator cannot.
     MESSAGE = "message"
     CONSENT = "consent"
     FEEDBACK = "feedback"
@@ -133,7 +141,10 @@ MATRIX: dict[tuple[str, str], dict[str, Access]] = {
         Resource.SCORE: Access.NONE,
         Resource.ALERT: Access.NONE,
         Resource.CASE_NOTE: Access.NONE,
-        Resource.MESSAGE: Access.WRITE,
+        # Messaging is adult-to-adult. A child talks to the adults they know
+        # through their check-in; the platform does not open a private channel
+        # that no one else can see.
+        Resource.MESSAGE: Access.NONE,
         Resource.CONSENT: Access.SUMMARY,
         # A child does not fill in a guardian pulse; emotional self-report is
         # the child's own channel. Left NONE so this resource cannot become a
@@ -176,6 +187,10 @@ AUDITED_RESOURCES = {
     Resource.SCORE,
     Resource.ALERT,
     Resource.CASE_NOTE,
+    # A message thread is the private correspondence of two adults about a
+    # child. Reading it without a relationship is exactly the kind of access
+    # that should leave a trail.
+    Resource.MESSAGE,
     Resource.FEEDBACK,
     Resource.AUDIT,
 }
@@ -222,6 +237,9 @@ def resolve_relation(user, child) -> str:
             child=child,
             is_active=True,
             consent_granted_at__isnull=False,
+            # Revocation must remove access, not merely record an intention to.
+            # `Guardianship.has_consent` applies the same two-sided rule.
+            consent_revoked_at__isnull=True,
         ).exists()
         return Relation.OWN if linked else Relation.NONE
 
@@ -285,6 +303,7 @@ def visible_children(user):
             guardianships__parent=user,
             guardianships__is_active=True,
             guardianships__consent_granted_at__isnull=False,
+            guardianships__consent_revoked_at__isnull=True,
         ).distinct()
 
     if user.role == Role.MENTOR:

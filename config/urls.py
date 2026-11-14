@@ -13,6 +13,7 @@ urlpatterns = [
     path("children/", include("children.urls")),
     path("", include("alerts.urls")),
     path("", include("feedback.urls")),
+    path("", include("messaging.urls")),
     path("", include("domains.urls")),
     path("", include("analytics.urls")),
 ]

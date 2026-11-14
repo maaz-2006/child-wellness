@@ -47,6 +47,12 @@
               <span aria-hidden="true">✉</span> Family updates
             </a>
           {% endif %}
+          {% if user.role == role_mentor or user.role == role_parent %}
+            <a class="nav-item {% if request.resolver_match.app_name == 'messaging' %}is-active{% endif %}"
+               href="{% url 'messaging:inbox' %}">
+              <span aria-hidden="true">✉</span> Messages
+            </a>
+          {% endif %}
           {% if is_platform_admin %}
             <a class="nav-item {% if request.resolver_match.url_name == 'cohort' %}is-active{% endif %}"
                href="{% url 'alerts:cohort' %}">
@@ -63,6 +69,10 @@
             <a class="nav-item {% if request.resolver_match.url_name == 'cohort_wellness' %}is-active{% endif %}"
                href="{% url 'analytics:cohort_wellness' %}">
               <span aria-hidden="true">◔</span> Cohort wellness
+            </a>
+            <a class="nav-item {% if request.resolver_match.url_name == 'model_report' %}is-active{% endif %}"
+               href="{% url 'analytics:model_report' %}">
+              <span aria-hidden="true">◇</span> Model benchmark
             </a>
             <a class="nav-item {% if request.resolver_match.url_name == 'permission_matrix' %}is-active{% endif %}"
                href="{% url 'core:permission_matrix' %}">

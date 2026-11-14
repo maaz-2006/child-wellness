@@ -48,6 +48,7 @@
     </p>
     <p><a class="btn btn-quiet" href="{% url 'core:permission_matrix' %}">View the enforced access matrix</a></p>
     <p><a class="btn btn-quiet" href="{% url 'analytics:cohort_wellness' %}">Open cohort wellness</a></p>
+    <p><a class="btn btn-quiet" href="{% url 'analytics:model_report' %}">Open the model benchmark</a></p>
     <p><a class="btn btn-quiet" href="{% url 'alerts:cohort' %}">Open cohort alerts</a></p>
     <p><a class="btn btn-quiet" href="{% url 'feedback:cohort_pulse' %}">Open pulse overview</a></p>
   </section>
@@ -74,6 +75,11 @@
       <p class="stat-label">Open total</p>
       <p class="stat-value">{{ alert_counts.total }}</p>
       <p class="stat-foot"><a href="{% url 'alerts:queue' %}">Open the queue</a></p>
+    </article>
+    <article class="stat">
+      <p class="stat-label">Unread messages</p>
+      <p class="stat-value">{{ message_counts.unread }}</p>
+      <p class="stat-foot"><a href="{% url 'messaging:inbox' %}">Open the inbox</a></p>
     </article>
   </section>
 {% endif %}
@@ -104,6 +110,18 @@
         {% endif %}
       </p>
       <p><a class="btn btn-quiet" href="{% url 'alerts:family' %}">See updates</a></p>
+    </article>
+    <article class="card">
+      <h2>Messages</h2>
+      <p class="muted">
+        {% if message_counts.unread %}
+          {{ message_counts.unread }} unread message{{ message_counts.unread|pluralize }}
+          across {{ message_counts.threads }} conversation{{ message_counts.threads|pluralize }}.
+        {% else %}
+          No unread messages. Conversations with your child's mentors stay here.
+        {% endif %}
+      </p>
+      <p><a class="btn btn-quiet" href="{% url 'messaging:inbox' %}">Open messages</a></p>
     </article>
   </div>
 {% endif %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}New message · {{ child.full_name }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ inbox_url }}">Messages</a>
+  <span aria-hidden="true">/</span>
+  <span>New conversation</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">About {{ child.full_name }}</p>
+  <h1>Start a conversation</h1>
+  <p class="muted">
+    Write to the other adults who know this child. This is not a child-facing
+    channel, and it is not a case note: record clinical or safeguarding
+    observations in the child's alert case file instead.
+  </p>
+</header>
+
+<div class="card card-tinted">
+  <p class="small">
+    Every message is visible to the child's assigned mentors and to guardians
+    with consent on file. The child and the administrator cannot read it.
+  </p>
+</div>
+
+<form method="post" class="card form-card" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="flash flash-error">
+      {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="stack">
+    {% include "domains/_field.html" with field=form.subject %}
+    {% include "domains/_field.html" with field=form.body %}
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Start conversation</button>
+    <a class="btn btn-quiet" href="{{ inbox_url }}">Cancel</a>
+    <a class="btn btn-quiet" href="{{ child_url }}">Child profile</a>
+  </div>
+</form>
+{% endblock %}

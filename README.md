@@ -141,7 +141,7 @@ persisted as an alert owned by a named person.
 **Rules are deterministic and explainable.** Each finding embeds the numbers
 that produced it, so a mentor can answer "why did this fire?" a week later
 without re-running a model. There is no machine-learning classifier in the
-production path.
+production path; the D6 benchmark is an offline evaluation only.
 
 | Rule | Tier | Fires when |
 |---|---|---|
@@ -210,9 +210,100 @@ difficult week, not a case.
 **Evaluation.** `manage.py backtest_alerts` replays the rules over the synthetic
 cohort's labelled trajectories and reports child-level precision, recall and
 median lead time. The demo cohort currently gives precision 0.70, recall 1.00
-and a median lead time of 12 days after simulated onset (3 false positives out
+and a median lead time of 10 days after simulated onset (3 false positives out
 of 15 negative children). Ground truth is synthetic: these figures measure the
 rules against the generator's labels, not against clinical outcomes.
+
+## Stakeholder messages (D6)
+
+`/messages/` is an adult-to-adult channel: a mentor and a guardian writing to
+each other about a child they both already care for. It is deliberately **not** a
+child-facing inbox.
+
+| Who | Access | Why |
+|---|---|---|
+| Mentor assigned to the child | read and write | Day-to-day coordination with home |
+| Guardian with consent on file | read and write | The other half of that conversation |
+| Any other mentor or guardian | none | Row gate: only assigned/consented adults reach a thread |
+| Child | none | A private adult-managed channel around a child is an unmonitored space, not support. The child's own channel is the check-in |
+| Administrator | none | Correspondence about a family is not configuration data |
+
+Four rules make the boundary enforceable rather than aspirational:
+
+- **Visibility is per child, not per role.** `messaging.services` asks the
+  permission gate for every thread. Ending a mentorship or revoking consent
+  removes access immediately; the history stays on record.
+- **Messages are append-only.** `Message.save()` refuses an update and
+  `Message.delete()` refuses a delete, so a correction is a new message rather
+  than a silent edit of the record.
+- **A closed thread stays readable.** A mentor can close a conversation; it then
+  accepts no new replies but remains visible to the adults who had access.
+- **Everything is audited.** Opening the inbox, reading a thread, starting one,
+  replying and closing all write an `AuditLog` row, and a denial is recorded
+  because `Resource.MESSAGE` is in `AUDITED_RESOURCES`.
+
+`messaging.admin` registers **nothing**. Registering these models would give the
+administrator role a second surface on the same data and make the permission
+matrix a decoration.
+
+Deliberately out of scope: attachments (no uploads anywhere), outbound email or
+push, guardian-to-guardian threads, and any child participation.
+
+## Offline model benchmark (D6)
+
+`/cohort/model/` answers a narrow, falsifiable question:
+
+> Can a plain logistic regression, given only the same structured features the
+> deterministic rules already use, separate the synthetic cohort's labelled
+> difficult periods from its stable periods when every held-out child is one the
+> model has never seen?
+
+It is an **offline evaluation, not a production classifier**. It writes no alert,
+no score and no per-child prediction; nothing in the care path reads it. The
+alert backtest above remains the early-warning measurement. This benchmark is a
+check on whether the features carry signal at all.
+
+| Property | Choice |
+|---|---|
+| Features | 13 numeric features: latest and prior overall scores, four-week change, deviation from the child's own recent range, the four domain scores, share of domains at or below 50, domain coverage, and the latest guardian wellbeing/support ratings with a missing-pulse flag |
+| Excluded inputs | Free text of every kind — check-in notes, observations, case notes, pulse comments, messages |
+| Labels | The synthetic archetype's *current* state: declining from its simulated onset, recovering before its recovery, healthy throughout. Sparse children are excluded because missing data is not a wellness label |
+| Validation | Leave-one-child-out by child. Splitting by snapshot would leak the same child into training and produce a flattering number |
+| Model | Ridge-penalised logistic regression fitted with IRLS in pure Python; no numpy, scikit-learn or extra deployment dependency |
+| Tuning | Fixed L2 = 0.05 and threshold 0.5. No hyper-parameter search on the evaluation data |
+
+Current report on the demo cohort: 176 held-out snapshots from 22 children
+(42 difficult, 134 stable), 22 folds.
+
+| Metric | Value |
+|---|---|
+| Accuracy | 0.9489 |
+| Precision | 0.9459 |
+| Recall | 0.8333 |
+| F1 | 0.8861 |
+| Specificity | 0.9851 |
+| ROC AUC | 0.9492 |
+| Brier score | 0.0455 |
+| Confusion | tp 35, fp 2, tn 132, fn 7 |
+
+**Reading the coefficients carefully.** The page also shows a separate
+full-cohort fit so each feature's direction can be discussed. Those standardised
+weights are unstable under collinearity — overall and domain scores move
+together, so an individual sign can flip even while the model predicts well. The
+weights answer "which features move the score?", not "what causes difficulty",
+and they are not part of the validated result.
+
+**Limits, stated plainly.** Ground truth is synthetic, so the figures measure the
+method against the generator's labels, not clinical outcomes. The task is
+state classification, not forecasting: a declining child is positive from onset,
+which is easier than predicting onset in advance. The stored `ModelReport` holds
+aggregate metrics, coefficients and counts only — no child id, name or
+per-child prediction — so the evaluation artefact cannot become a label about a
+person.
+
+Regenerate with `python manage.py ml_report` (or `seed_demo --reset`, which runs
+it at the end). Only an administrator can open the page; every other role is
+refused and the refusal is audited.
 
 ## Local development
 
@@ -237,6 +328,7 @@ Useful commands:
 | `python manage.py evaluate_alerts` | Run the alert rules and persist findings |
 | `python manage.py evaluate_alerts --dry-run` | Show what would fire without writing |
 | `python manage.py backtest_alerts --weeks 8` | Precision, recall and lead time on the synthetic cohort |
+| `python manage.py ml_report` | Re-run the offline classifier benchmark and store an aggregate report |
 | `python manage.py cohort_report` | Verify the archetypes behave differently |
 | `python scripts/check_compat.py` | Fail if anything needs > Python 3.13 |
 | `python manage.py check --deploy` | Security posture under production settings |
@@ -248,9 +340,10 @@ config/      settings, urls, wsgi
 core/        User + Role, School, AuditLog, permissions, mixins, audit helpers
 children/    Child, Guardianship, Mentorship, ConsentRecord
 domains/     the four wellness modules (shared base + per-domain models)
-analytics/   scoring engine, baselines, SVG charts, management commands
+analytics/   scoring engine, baselines, SVG charts, offline model benchmark, commands
 alerts/      deterministic rules, alert engine, safeguarding screen, case workflow
 feedback/    weekly guardian pulse and aggregate participation
+messaging/   adult-to-adult threads about a child (append-only, audited)
 templates/   server-rendered pages
 static/      hand-written CSS and vanilla JS (no build step)
 ```

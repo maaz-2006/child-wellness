@@ -668,6 +668,51 @@ textarea { resize: vertical; min-height: 96px; }
 .timeline-meta { margin: 0 0 .3em; font-size: .82rem; color: var(--muted); }
 .timeline-body p:last-child { margin-bottom: 0; }
 
+/* ---------- Messaging --------------------------------------------------- */
+.avatar-sm {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 8px;
+  font-size: .95rem;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.message-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.message {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  max-width: 78ch;
+}
+
+.message-mine {
+  border-color: #c3e4df;
+  background: var(--brand-soft);
+}
+
+.message-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: .45em;
+}
+
+.message-body { overflow-wrap: anywhere; }
+
+.stat-value-sm { font-size: 1.15rem; line-height: 1.35; overflow-wrap: anywhere; }
+
 /* ---------- Responsive -------------------------------------------------- */
 @media (max-width: 900px) {
   .shell { grid-template-columns: 1fr; }

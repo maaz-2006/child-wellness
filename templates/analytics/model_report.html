@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Offline model benchmark · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ cohort_url }}">Cohort wellness</a>
+  <span aria-hidden="true">/</span>
+  <span>Model benchmark</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">Methodology appendix · not a decision system</p>
+  <h1>Offline model benchmark</h1>
+  <p class="muted">
+    A plain logistic regression is fitted to the same structured features the
+    deterministic rules use, then validated leave-one-child-out. It produces no
+    alert, score or individual prediction. This page exists so the report can
+    quote a measured figure instead of asserting that a model "works".
+  </p>
+</header>
+
+<div class="flash flash-info">
+  <strong>This model is not connected to any child's care.</strong>
+  Production decisions remain deterministic rules plus a named human. The
+  benchmark labels are the synthetic cohort's current state, not a forecast.
+</div>
+
+{% if report %}
+  <section class="stat-grid" aria-label="Benchmark summary">
+    <article class="stat">
+      <p class="stat-label">Algorithm</p>
+      <p class="stat-value stat-value-sm">{{ report.algorithm }}</p>
+      <p class="stat-foot">version {{ report.method_version }}</p>
+    </article>
+    <article class="stat">
+      <p class="stat-label">Held-out snapshots</p>
+      <p class="stat-value">{{ report.n_examples }}</p>
+      <p class="stat-foot">{{ report.n_positive }} difficult · {{ report.n_negative }} stable</p>
+    </article>
+    <article class="stat">
+      <p class="stat-label">Children</p>
+      <p class="stat-value">{{ report.n_children }}</p>
+      <p class="stat-foot">{{ report.folds }} leave-one-child-out folds</p>
+    </article>
+    <article class="stat">
+      <p class="stat-label">Status</p>
+      <p class="stat-value stat-value-sm">{% if report.has_metrics %}Measured{% else %}Insufficient data{% endif %}</p>
+      <p class="stat-foot">as of {{ report.as_of|date:"j M Y" }}</p>
+    </article>
+  </section>
+
+  {% if report.has_metrics %}
+    <section class="section">
+      <div class="section-head">
+        <h2>Leave-one-child-out metrics</h2>
+        <span class="pill">Threshold {{ report.threshold }}</span>
+      </div>
+
+      <div class="table-wrap card">
+        <table class="table">
+          <thead>
+            <tr><th scope="col">Metric</th><th scope="col">Value</th><th scope="col">What it means</th></tr>
+          </thead>
+          <tbody>
+            {% for row in metric_rows %}
+              <tr>
+                <td class="nowrap"><strong>{{ row.label }}</strong></td>
+                <td class="nowrap">{{ row.value }}</td>
+                <td class="muted small">{{ row.description }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="two-col section">
+        <article class="card">
+          <h2>Confusion matrix</h2>
+          <table class="table">
+            <thead>
+              <tr><th scope="col"></th><th scope="col">Predicted difficult</th><th scope="col">Predicted stable</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Actually difficult</th>
+                <td>True positive <strong>{{ report.confusion.tp }}</strong></td>
+                <td>False negative <strong>{{ report.confusion.fn }}</strong></td>
+              </tr>
+              <tr>
+                <th scope="row">Actually stable</th>
+                <td>False positive <strong>{{ report.confusion.fp }}</strong></td>
+                <td>True negative <strong>{{ report.confusion.tn }}</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="muted small">
+            A false positive here is a stable synthetic period classified as
+            difficult. In this benchmark it costs a review, not a child's
+            reputation, because no output reaches a child.
+          </p>
+        </article>
+
+        <article class="card card-tinted">
+          <h2>How to read the figures</h2>
+          <ul class="plain-list">
+            <li>Precision falls when the model flags stable periods; recall falls
+              when it misses difficult ones. They trade off at the fixed 0.5
+              threshold.</li>
+            <li>ROC AUC is threshold-free ranking quality. Accuracy alone hides
+              class imbalance, so it is reported beside prevalence.</li>
+            <li>The Brier score is the mean squared probability error; lower is
+              better and it rewards calibrated probabilities, not only labels.</li>
+            <li>Ground truth is synthetic. These figures measure the method
+              against the generator's labels, not clinical outcomes.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Feature directions</h2>
+        <span class="pill">Full-cohort fit · interpretation only</span>
+      </div>
+
+      {% if coefficient_rows %}
+        <div class="table-wrap card">
+          <table class="table">
+            <thead>
+              <tr><th scope="col">Feature</th><th scope="col">Standardised weight</th><th scope="col">Direction</th></tr>
+            </thead>
+            <tbody>
+              {% for row in coefficient_rows %}
+                <tr>
+                  <td>{{ row.label }}</td>
+                  <td class="nowrap">{{ row.weight }}</td>
+                  <td class="muted small">{{ row.direction }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="muted small footnote">
+          Weights are from a separate fit on the whole synthetic cohort and are
+          not part of the validated result. They answer "which features move the
+          score?" not "does this model work?" or "what causes difficulty".
+          Features are standardised, so a weight is a change in log-odds per
+          standard deviation. Scores move together, so individual signs are
+          unstable under collinearity and should not be read as causal
+          directions. No free text, note or message is a feature.
+        </p>
+      {% else %}
+        <p class="muted">No coefficients are available for this report.</p>
+      {% endif %}
+    </section>
+  {% else %}
+    <div class="empty">
+      <p class="empty-mark" aria-hidden="true">○</p>
+      <h3>Not enough examples for a benchmark</h3>
+      <p class="muted">
+        The command needs at least {{ min_examples }} usable snapshots, with both
+        classes represented. Run <code>python manage.py seed_demo --reset</code>
+        and then <code>python manage.py ml_report</code>.
+      </p>
+    </div>
+  {% endif %}
+
+  <section class="section">
+    <div class="card">
+      <h2>Method and limits</h2>
+      <dl class="stat-list">
+        <div><dt>Task</dt><dd>{{ report.task }}</dd></div>
+        <div><dt>Features</dt><dd>{{ feature_count }} numeric features from stored scores and guardian ratings</dd></div>
+        <div><dt>Validation</dt><dd>Leave-one-child-out; all snapshots from the held-out child are predicted by a model trained on other children</dd></div>
+        <div><dt>Regularisation</dt><dd>L2 = {{ report.l2 }}, no hyper-parameter search on the evaluation data</dd></div>
+        <div><dt>Threshold</dt><dd>{{ report.threshold }} for the confusion matrix; probabilities are reported separately</dd></div>
+        <div><dt>Excluded</dt><dd>Sparse-data children, because a recording gap is not a wellness label</dd></div>
+      </dl>
+      <p class="muted small">{{ report.notes }}</p>
+    </div>
+  </section>
+{% else %}
+  <div class="empty">
+    <p class="empty-mark" aria-hidden="true">○</p>
+    <h3>No benchmark has been run</h3>
+    <p class="muted">
+      Run <code>python manage.py ml_report</code> after the synthetic cohort is
+      seeded. The command stores an aggregate report and changes no child record.
+    </p>
+  </div>
+{% endif %}
+
+<p class="action-row">
+  <a class="btn btn-quiet" href="{{ cohort_url }}">Cohort wellness</a>
+  <a class="btn btn-quiet" href="{% url 'core:permission_matrix' %}">Access matrix</a>
+</p>
+{% endblock %}

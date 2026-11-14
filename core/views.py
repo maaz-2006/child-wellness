@@ -108,6 +108,7 @@ class DashboardView(TemplateView):
                 "concern": by_tier.get(Alert.Tier.CONCERN, 0),
                 "watch": by_tier.get(Alert.Tier.WATCH, 0),
             }
+            context["message_counts"] = _message_counts(user)
         elif user.role == Role.PARENT:
             from alerts.models import Alert
             from feedback.services import children_due_for
@@ -118,7 +119,19 @@ class DashboardView(TemplateView):
             ).exclude(status=Alert.Status.DISMISSED)
             context["alert_counts"] = {"shared": shared.count()}
             context["pulse_due"] = children_due_for(user)
+            context["message_counts"] = _message_counts(user)
         return context
+
+
+def _message_counts(user) -> dict:
+    """Conversation and unread counts for the two adult roles that can message."""
+    from messaging import services
+
+    threads = list(services.threads_for(user))
+    return {
+        "threads": len(threads),
+        "unread": sum(services.unread_count(user, thread) for thread in threads),
+    }
 
 
 def _cohort_alert_counts() -> dict:

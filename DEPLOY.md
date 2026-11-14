@@ -121,7 +121,7 @@ Expected:
 
 Then open `https://Maaz2006.pythonanywhere.com/` in a browser and sign in.
 
-Useful surfaces to verify after a D5 deploy:
+Useful surfaces to verify after a D5+D6 deploy:
 
 | URL | Expected when signed out |
 |---|---|
@@ -130,8 +130,12 @@ Useful surfaces to verify after a D5 deploy:
 | `/alerts/family/` | redirect to sign-in (guardian view) |
 | `/cohort/alerts/` | redirect to sign-in (admin aggregate) |
 | `/cohort/pulse/` | redirect to sign-in (admin aggregate) |
+| `/cohort/model/` | redirect to sign-in (admin benchmark, aggregate only) |
+| `/messages/` | redirect to sign-in (mentor/guardian inbox) |
 | `/children/1/pulse/history/` | redirect to sign-in |
+| `/children/1/messages/new/` | redirect to sign-in |
 | `/alerts/999999/` | 404, not a 500 |
+| `/messages/999999/` | 404, not a 500 |
 
 ---
 
@@ -147,6 +151,7 @@ pip install -r requirements.txt
 python manage.py migrate
 python manage.py recompute_wellness   # rebuild derived scores/baselines
 python manage.py evaluate_alerts      # run alert rules, persist findings
+python manage.py ml_report            # offline benchmark -> aggregate ModelReport
 python manage.py collectstatic --noinput
 ```
 
@@ -159,17 +164,43 @@ missing run shows empty trends, not wrong ones.
 `evaluate_alerts` recomputes scores first by default and then evaluates the
 rules. It is idempotent: an alert already open for a rule is updated, not
 duplicated, and `occurrences` only increments once per day. Safe to run as often
-as you like. On the synthetic demo cohort it prints:
+as you like. On the synthetic demo cohort it prints something like:
 
 ```
 Evaluated 24 children as of <date>: 17 findings, 17 alerts
-(urgent 4, concern 13, watch 0).
+(urgent 3, concern 13, watch 1).
 ```
+
+`ml_report` runs the offline logistic-regression benchmark and stores one
+aggregate `ModelReport` for `/cohort/model/`. It writes no score, no alert and no
+per-child prediction, so it is safe to re-run; the page shows the newest report.
+The command prints an "insufficient data" line instead of metrics if the cohort
+is too small.
 
 `backtest_alerts` is an evaluation tool, not part of a deploy. It replays the
 rules over the labelled synthetic trajectories and prints precision, recall and
 median lead time; it restores the current scores when it finishes. Do not run it
 against a real cohort.
+
+### Updating an existing demo database from D4/D5 to D6
+
+The messaging tables and the model report are new, so run the normal block above.
+If you are keeping a synthetic demo database rather than real records, the
+cleanest way to fill messaging threads and the benchmark is:
+
+```bash
+workon kito
+cd ~/child-wellness
+git pull
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+python manage.py seed_demo --reset     # rebuilds demo data, messages, alerts, ModelReport
+```
+
+`seed_demo --reset` deletes only rows belonging to the synthetic demo cohort
+(children carrying a `ScenarioLabel` and the demo users). It is not a production
+command. Never run it against a database containing real children.
 
 Before the first alert run on the host, make sure the school has a designated
 safeguarding lead — urgent findings are assigned to that named person. Either

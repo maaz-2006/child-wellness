@@ -44,6 +44,7 @@ from domains.models import (
     Source,
 )
 from feedback.models import PulseResponse, current_week_start
+from messaging.models import Message, Thread
 
 DEMO_PASSWORD = "kito-demo-2026"
 DEMO_EMAIL_DOMAIN = "demo.kito.local"
@@ -67,6 +68,20 @@ SOCIAL_DIMENSIONS = [
     ("belonging", 0.15),
 ]
 CONTEXTS = ["classroom", "classroom", "group_work", "playground", "club"]
+
+MESSAGE_SUBJECTS = [
+    "Settling into the term",
+    "Reading practice at home",
+    "Following up on the weekly pulse",
+    "A quick note about this week",
+    "Morning routine and sleep",
+]
+
+MESSAGE_OPENERS = [
+    "Hello, thank you for the update through the pulse. I wanted to check in about how things are going at school.",
+    "Good morning. I have noticed a few changes this week and thought it would be useful to compare notes.",
+    "Thank you for your message. We are keeping an eye on things here and will let you know if anything changes.",
+]
 
 #: Distribution of archetypes. Healthy dominates, as it would in a real cohort;
 #: roughly one child in eight is in trouble at any time.
@@ -143,10 +158,18 @@ class Command(BaseCommand):
 
         self.scores = scoring.recompute_all(as_of=self.end)
         self._pulse(children)
+        self._messages(children)
 
         from alerts import engine
 
         self.alerts = engine.evaluate_all(as_of=self.end)
+
+        # The model report is derived, offline and aggregate-only. Running it
+        # here keeps the administrator's methodology page populated without
+        # making model output part of any child's record.
+        from analytics import ml
+
+        self.model_report = ml.evaluate_and_store(as_of=self.end)
         self._report(school, children)
 
     def _pulse(self, children: list[Child]) -> None:
@@ -207,8 +230,76 @@ class Command(BaseCommand):
 
         self.counts["pulse responses"] = created
 
+    def _messages(self, children: list[Child]) -> None:
+        """A few adult-to-adult threads for consented children.
+
+        The content is deliberately ordinary: a greeting, a short reply and
+        sometimes one follow-up. The demo is meant to show the workflow and the
+        access boundary, not to supply realistic family disclosures. A real
+        deployment would contain real correspondence, which is exactly why the
+        child and the administrator cannot read it.
+        """
+        threads = 0
+        messages = 0
+        for index, child in enumerate(children):
+            if not child.has_consent or index % 3:
+                continue
+            mentorship = (
+                child.mentorships.filter(is_active=True)
+                .select_related("mentor")
+                .first()
+            )
+            guardianship = (
+                child.guardianships.filter(is_primary=True)
+                .select_related("parent")
+                .first()
+                or child.guardianships.select_related("parent").first()
+            )
+            if mentorship is None or guardianship is None:
+                continue
+
+            mentor = mentorship.mentor
+            guardian = guardianship.parent
+            thread = Thread.objects.create(
+                child=child,
+                subject=self.rng.choice(MESSAGE_SUBJECTS),
+                created_by=mentor,
+            )
+            conversation = [
+                (mentor, self.rng.choice(MESSAGE_OPENERS)),
+                (
+                    guardian,
+                    "Thank you for getting in touch. That matches what we are "
+                    "seeing at home, and we will keep you posted.",
+                ),
+            ]
+            if index % 6 == 0:
+                conversation.append(
+                    (
+                        mentor,
+                        "That is helpful, thank you. I will check in again after "
+                        "the next weekly update.",
+                    )
+                )
+            last = None
+            for author, body in conversation:
+                last = Message.objects.create(
+                    thread=thread, author=author, body=body
+                )
+                messages += 1
+            if last is not None:
+                thread.last_message_at = last.created_at
+                thread.save(update_fields=["last_message_at"])
+            threads += 1
+
+        self.counts["message threads"] = threads
+        self.counts["messages"] = messages
+
     # ------------------------------------------------------------------
     def _reset(self) -> None:
+        from analytics.models import ModelReport
+
+        ModelReport.objects.all().delete()
         demo_children = Child.objects.filter(scenario_label__isnull=False)
         count = demo_children.count()
         demo_children.delete()
@@ -590,6 +681,13 @@ class Command(BaseCommand):
                 f"(urgent {alerts['by_tier'].get('urgent', 0)}, "
                 f"concern {alerts['by_tier'].get('concern', 0)}, "
                 f"watch {alerts['by_tier'].get('watch', 0)})"
+            )
+        model_report = getattr(self, "model_report", None)
+        if model_report:
+            self.stdout.write(
+                f"  {'model report':<20}#{model_report.pk} "
+                f"({model_report.status}, {model_report.n_examples} snapshots, "
+                f"{model_report.n_children} children)"
             )
         self.stdout.write("")
         self.stdout.write("  archetypes")

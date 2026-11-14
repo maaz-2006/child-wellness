@@ -23,6 +23,7 @@ from core.permissions import Access, Resource
 from domains import access
 from domains.registry import DOMAINS
 from feedback.services import history_for as pulse_history
+from messaging import services as messaging_services
 
 from .models import Guardianship, Mentorship
 
@@ -86,6 +87,12 @@ class ChildDetailView(ChildScopedMixin, TemplateView):
             user.role == Role.PARENT
             and permissions.has_access(user, child, Resource.FEEDBACK, Access.WRITE)
         )
+        can_view_messages = permissions.has_access(
+            user, child, Resource.MESSAGE, Access.READ
+        )
+        can_start_message = permissions.has_access(
+            user, child, Resource.MESSAGE, Access.WRITE
+        )
         is_self = user.role == Role.CHILD and getattr(user, "child_profile", None) == child
 
         from alerts.models import Alert
@@ -147,6 +154,17 @@ class ChildDetailView(ChildScopedMixin, TemplateView):
                 "pulse_url": reverse("feedback:pulse", args=[child.pk]),
                 "pulse_history_url": reverse(
                     "feedback:pulse_history", args=[child.pk]
+                ),
+                "can_view_messages": can_view_messages,
+                "can_start_message": can_start_message,
+                "message_threads": (
+                    messaging_services.threads_for_child(child)[:5]
+                    if can_view_messages
+                    else []
+                ),
+                "messages_url": reverse("messaging:inbox"),
+                "new_message_url": reverse(
+                    "messaging:new_thread", args=[child.pk]
                 ),
             }
         )

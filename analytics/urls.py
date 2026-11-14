@@ -10,4 +10,9 @@ urlpatterns = [
         views.CohortWellnessView.as_view(),
         name="cohort_wellness",
     ),
+    path(
+        "cohort/model/",
+        views.ModelReportView.as_view(),
+        name="model_report",
+    ),
 ]

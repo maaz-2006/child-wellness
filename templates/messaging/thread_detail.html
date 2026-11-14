@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ thread.subject }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ inbox_url }}">Messages</a>
+  <span aria-hidden="true">/</span>
+  <span>{{ thread.subject }}</span>
+</nav>
+
+<header class="detail-head">
+  <span class="avatar avatar-lg" aria-hidden="true">{{ child.avatar }}</span>
+  <div class="detail-meta">
+    <p class="eyebrow">
+      {% if thread.is_closed %}
+        <span class="badge badge-none">Closed</span>
+      {% else %}
+        <span class="badge badge-open">Open</span>
+      {% endif %}
+      <span class="muted small">started {{ thread.created_at|date:"j M Y" }}</span>
+    </p>
+    <h1>{{ thread.subject }}</h1>
+    <p class="muted">
+      About <a href="{{ child_url }}">{{ child.full_name }}</a> ·
+      {{ messages_list|length }} message{{ messages_list|length|pluralize }}
+    </p>
+  </div>
+</header>
+
+<div class="card card-tinted">
+  <p class="small">
+    This thread is readable by the child's assigned mentors and by guardians
+    with consent on file. It is not shown to the child or to the administrator.
+    Messages cannot be edited or deleted; a correction is a new message.
+  </p>
+</div>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Conversation</h2>
+    <span class="pill">Oldest first</span>
+  </div>
+
+  <ol class="message-list">
+    {% for message in messages_list %}
+      <li class="message {% if message.author == user %}message-mine{% endif %}">
+        <div class="message-head">
+          <span class="person-name">{{ message.author.display_name|default:"Unknown author" }}</span>
+          <span class="muted small">{{ message.created_at|date:"j M Y, H:i" }}</span>
+        </div>
+        <div class="message-body">{{ message.body|linebreaksbr }}</div>
+      </li>
+    {% empty %}
+      <li class="muted">No messages in this conversation.</li>
+    {% endfor %}
+  </ol>
+</section>
+
+{% if can_write %}
+  <section class="section">
+    <form method="post" class="card form-card">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="reply">
+      <h2>Reply</h2>
+      {% include "domains/_field.html" with field=form.body %}
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Send message</button>
+        <a class="btn btn-quiet" href="{{ inbox_url }}">Back to inbox</a>
+      </div>
+    </form>
+  </section>
+{% else %}
+  <div class="flash flash-warning">
+    This conversation is closed. Its history stays readable, but no new messages
+    can be added.
+  </div>
+{% endif %}
+
+{% if can_close and not thread.is_closed %}
+  <section class="section">
+    <form method="post" class="card">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="close">
+      <h2>Close conversation</h2>
+      <p class="muted small">
+        Closing stops new messages. Nothing is deleted, and the thread remains
+        visible to the adults who had access to it.
+      </p>
+      <button class="btn btn-quiet" type="submit">Close conversation</button>
+    </form>
+  </section>
+{% endif %}
+
+<p class="action-row">
+  <a class="btn btn-quiet" href="{{ inbox_url }}">Back to inbox</a>
+  <a class="btn btn-quiet" href="{{ child_url }}">Child profile</a>
+</p>
+{% endblock %}
