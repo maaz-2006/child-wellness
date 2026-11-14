@@ -70,6 +70,68 @@ Two details are deliberate:
   Re-submitting as the same person updates your own row; a *different* person
   is told the day is already covered.
 
+## Wellness scores (method 1.0)
+
+Scores are a **derived** summary, not source data. `DomainScore` and
+`BaselineStat` are a cache of a calculation: delete them, run
+`manage.py recompute_wellness`, and the same entries produce the same numbers.
+Every row carries the `method_version` that produced it, so an old figure can be
+explained by the arithmetic that was in force at the time.
+
+**Shape.** For each child, each of the four domains and a combined `overall`
+pseudo-domain, the platform stores one score per rolling 7-day window, eight
+windows deep. The latest window always ends today, so a new entry is visible on
+the next page load rather than waiting for a calendar week to close. Each window
+also stores how many distinct days contributed and a confidence label.
+
+**Normalisation.** Every domain is reduced to a per-day value between 0 and 1
+before anything is averaged, because minutes of activity, marks out of twenty
+and 1–5 ratings are not the same kind of quantity:
+
+| Domain | Daily value | Weight |
+|---|---|---|
+| Emotional wellness | Mean of mood, energy, sleep quality and felt connection (1–5 → 0–1) | 40% |
+| Academic progress | Mark as a share of the maximum available | 25% |
+| Healthy habits | Sleep against age-appropriate guidelines, activity, screen time, nutrition, breakfast | 20% |
+| Social development | Structured 1–5 observation ratings | 15% |
+
+When several people report on the same day, their values are averaged for that
+day. A window with no entries produces **no row at all** rather than a zero:
+a missing week is a gap in the chart, not evidence of a decline.
+
+**Combining domains.** The overall score uses the weights of the domains that
+actually have data on a given day, renormalised so absent domains are not
+counted as zero. It also requires at least two domains that day; a child with
+only emotional check-ins gets no overall score, and the page says why.
+"Averaging missing domains as zero" is how a monitoring system quietly labels an
+unmeasured child as unwell.
+
+**Baselines.** For each child and domain the platform stores a 28-day mean and
+standard deviation. That personal band is what the charts shade and what D5's
+alert engine will compare against — not a population average, because the
+population includes children whose normal is already a concern.
+
+**Confidence is coverage, not certainty.** Labels are set per domain's natural
+reporting cadence: `good` when a window has enough distinct days for that domain,
+`moderate` at roughly half, `thin` for one or two entries, `none` for a gap.
+Academic and social observations are less frequent than a daily check-in, so
+they have a lower threshold than emotional or habits.
+
+**Free text is excluded.** The scoring code queries numeric fields only. A note
+on a check-in is the highest-risk field on the platform; a numeric score must
+not become a side channel that leaks it.
+
+**Who sees what.** Mentors and guardians with `SCORE: READ` for a child see that
+child's trend. The administrator has `SCORE: AGGREGATE` at institution scope:
+they see cohort averages, distribution and confidence counts, never a child's
+individual trend, and the aggregate page has no names to redact. A child is
+refused both — `(CHILD, SELF)` has `SCORE: NONE`.
+
+Charts are inline server-rendered SVG with a fixed 0–100 axis (auto-scaling
+makes a two-point wobble look like a crisis), gaps that break the line, and the
+same numbers repeated in a `<details>` table so the chart is never the only way
+to read the data.
+
 ## Local development
 
 ```powershell
@@ -89,6 +151,7 @@ Useful commands:
 | Command | Purpose |
 |---|---|
 | `python manage.py seed_demo --reset` | Rebuild the synthetic cohort |
+| `python manage.py recompute_wellness` | Rebuild every stored score and baseline |
 | `python manage.py cohort_report` | Verify the archetypes behave differently |
 | `python scripts/check_compat.py` | Fail if anything needs > Python 3.13 |
 | `python manage.py check --deploy` | Security posture under production settings |
@@ -100,7 +163,7 @@ config/      settings, urls, wsgi
 core/        User + Role, School, AuditLog, permissions, mixins, audit helpers
 children/    Child, Guardianship, Mentorship, ConsentRecord
 domains/     the four wellness modules (shared base + per-domain models)
-analytics/   scoring, baselines, anomaly detection, management commands
+analytics/   scoring engine, baselines, SVG charts, management commands
 alerts/      alert engine, case workflow
 feedback/    structured stakeholder feedback
 templates/   server-rendered pages

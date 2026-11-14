@@ -20,6 +20,9 @@
     </p>
   </div>
   <div class="detail-actions">
+    {% if can_view_scores %}
+      <a class="btn btn-quiet" href="{{ wellness_url }}">Wellness trend</a>
+    {% endif %}
     {% if can_checkin %}
       <a class="btn btn-primary" href="{{ checkin_url }}">Check in</a>
     {% endif %}

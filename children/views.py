@@ -68,6 +68,9 @@ class ChildDetailView(ChildScopedMixin, TemplateView):
         can_observe = permissions.has_access(
             user, child, Resource.EMOTIONAL_OBSERVATION, Access.WRITE
         )
+        can_view_scores = permissions.has_access(
+            user, child, Resource.SCORE, Access.READ
+        )
         is_self = user.role == Role.CHILD and getattr(user, "child_profile", None) == child
 
         # Guardians and mentors are shown to staff as part of the care picture.
@@ -92,6 +95,10 @@ class ChildDetailView(ChildScopedMixin, TemplateView):
             {
                 "sections": sections,
                 "can_observe": can_observe,
+                "can_view_scores": can_view_scores,
+                "wellness_url": reverse(
+                    "children:wellness", args=[child.pk]
+                ),
                 "is_self": is_self,
                 "has_consent": child.has_consent,
                 "show_care_team": staff_view,

@@ -128,6 +128,12 @@ class Command(BaseCommand):
             children = self._children(school, mentors)
             self._generate(children)
 
+        # Scores are derived data, so they are computed after the raw rows are
+        # committed. Seeding a demo without this step would leave every trend
+        # chart empty and make the platform look broken rather than uncomputed.
+        from analytics import scoring
+
+        self.scores = scoring.recompute_all(as_of=self.end)
         self._report(school, children)
 
     # ------------------------------------------------------------------
@@ -503,6 +509,9 @@ class Command(BaseCommand):
         self.stdout.write(f"  children    {len(children)}")
         for name, count in self.counts.items():
             self.stdout.write(f"  {name:<20}{count}")
+        scores = getattr(self, "scores", None)
+        if scores:
+            self.stdout.write(f"  {'wellness scores':<20}{scores['scores']}")
         self.stdout.write("")
         self.stdout.write("  archetypes")
         for archetype, count in sorted(archetypes.items()):

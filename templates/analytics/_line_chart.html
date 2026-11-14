@@ -1,0 +1,76 @@
+{% comment %}
+  One server-rendered line chart. Expects a single `chart` dict from
+  analytics/charts.py; performs no arithmetic of its own.
+
+  The SVG is labelled for assistive technology and the same numbers are
+  available as a table, so the chart is never the only way to read the data.
+{% endcomment %}
+{% if chart.empty %}
+  <p class="chart-empty">No data in this window yet.</p>
+{% else %}
+  <figure class="chart">
+    <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}"
+         role="img"
+         aria-labelledby="{{ chart.id }}-title {{ chart.id }}-desc">
+      <title id="{{ chart.id }}-title">{{ chart.title }}</title>
+      <desc id="{{ chart.id }}-desc">{{ chart.description }}</desc>
+
+      {% if chart.band %}
+        <rect class="chart-band"
+              x="{{ chart.band.x }}" y="{{ chart.band.y }}"
+              width="{{ chart.band.width }}" height="{{ chart.band.height }}"
+              rx="3"></rect>
+      {% endif %}
+
+      <g class="chart-grid" aria-hidden="true">
+        {% for tick in chart.y_ticks %}
+          <line x1="{{ chart.plot_left }}" y1="{{ tick.y }}"
+                x2="{{ chart.plot_right }}" y2="{{ tick.y }}"></line>
+          <text class="chart-tick" x="{{ chart.y_label_x }}"
+                y="{{ tick.y }}" text-anchor="end"
+                dominant-baseline="middle">{{ tick.label }}</text>
+        {% endfor %}
+      </g>
+
+      {% for segment in chart.segments %}
+        <path class="chart-line" d="{{ segment }}"></path>
+      {% endfor %}
+
+      {% for dot in chart.dots %}
+        <circle class="chart-dot" cx="{{ dot.cx }}" cy="{{ dot.cy }}" r="3.6">
+          <title>{{ dot.label }}: {{ dot.value|floatformat:0 }} / 100</title>
+        </circle>
+      {% endfor %}
+
+      <g aria-hidden="true">
+        {% for tick in chart.x_ticks %}
+          <text class="chart-tick" x="{{ tick.x }}" y="{{ chart.x_label_y }}"
+                text-anchor="middle">{{ tick.label }}</text>
+        {% endfor %}
+      </g>
+    </svg>
+
+    <details class="chart-data">
+      <summary>Show the numbers</summary>
+      <table class="table">
+        <thead>
+          <tr><th scope="col">Window ending</th><th scope="col">Score</th></tr>
+        </thead>
+        <tbody>
+          {% for point in chart.points %}
+            <tr>
+              <td>{{ point.label }}</td>
+              <td>
+                {% if point.value is not None %}
+                  {{ point.value|floatformat:1 }}
+                {% else %}
+                  <span class="muted">No data</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </figure>
+{% endif %}

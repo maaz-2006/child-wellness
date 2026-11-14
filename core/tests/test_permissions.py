@@ -136,6 +136,36 @@ class MatrixTests(GateFixture):
         )
 
 
+class InstitutionAccessTests(GateFixture):
+    """Aggregate access is resolved without a child, from the INSTITUTION row."""
+
+    def test_admin_has_aggregate_on_scores_but_not_read(self):
+        self.assertEqual(
+            permissions.access_for_institution(self.admin, Resource.SCORE),
+            Access.AGGREGATE,
+        )
+        self.assertLess(
+            permissions.access_for_institution(self.admin, Resource.SCORE),
+            Access.READ,
+        )
+
+    def test_no_one_else_has_institution_access(self):
+        for user in (self.parent, self.mentor, self.child_user):
+            self.assertEqual(
+                permissions.access_for_institution(user, Resource.SCORE),
+                Access.NONE,
+                user.username,
+            )
+
+    def test_anonymous_user_has_no_institution_access(self):
+        from django.contrib.auth.models import AnonymousUser
+
+        self.assertEqual(
+            permissions.access_for_institution(AnonymousUser(), Resource.SCORE),
+            Access.NONE,
+        )
+
+
 class VisibleChildrenTests(GateFixture):
     def test_parent_sees_only_their_child(self):
         self.assertEqual(list(permissions.visible_children(self.parent)), [self.child])

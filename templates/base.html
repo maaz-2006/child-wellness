@@ -36,6 +36,10 @@
             </a>
           {% endif %}
           {% if is_platform_admin %}
+            <a class="nav-item {% if request.resolver_match.url_name == 'cohort_wellness' %}is-active{% endif %}"
+               href="{% url 'analytics:cohort_wellness' %}">
+              <span aria-hidden="true">◔</span> Cohort wellness
+            </a>
             <a class="nav-item {% if request.resolver_match.url_name == 'permission_matrix' %}is-active{% endif %}"
                href="{% url 'core:permission_matrix' %}">
               <span aria-hidden="true">⛨</span> Access matrix

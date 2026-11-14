@@ -12,6 +12,7 @@ urlpatterns = [
     path("", include("core.urls")),
     path("children/", include("children.urls")),
     path("", include("domains.urls")),
+    path("", include("analytics.urls")),
 ]
 
 # Custom error pages (DEBUG=False only, but defined unconditionally so the

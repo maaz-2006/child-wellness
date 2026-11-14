@@ -245,6 +245,23 @@ def has_access(user, child, resource: str, required: Access = Access.READ) -> bo
     return access_for(user, child, resource) >= required
 
 
+def access_for_institution(user, resource: str) -> Access:
+    """Access to institution-wide data that does not name a child.
+
+    Some resources have an aggregate form that is not "a weaker view of one
+    child" but a genuinely different thing: the average score of a cohort, a
+    count of open alerts. Asking `access_for` for one of those is meaningless
+    because there is no child to resolve a relationship against, so the
+    institutional relation is used directly.
+
+    Only a role with an INSTITUTION row in the matrix can receive anything;
+    everyone else fails closed.
+    """
+    if not is_authenticated(user):
+        return Access.NONE
+    return MATRIX.get((user.role, Relation.INSTITUTION), {}).get(resource, Access.NONE)
+
+
 def visible_children(user):
     """Queryset of children this user may see at all. Used by list views."""
     from children.models import Child, Guardianship, Mentorship

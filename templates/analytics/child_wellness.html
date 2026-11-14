@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Wellness trend · {{ child.full_name }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ back_url }}">{{ child.full_name }}</a>
+  <span aria-hidden="true">/</span>
+  <span>Wellness trend</span>
+</nav>
+
+<header class="detail-head">
+  <span class="avatar avatar-lg" aria-hidden="true">{{ child.avatar }}</span>
+  <div class="detail-meta">
+    <p class="eyebrow">Derived summary · method {{ method_version }}</p>
+    <h1>Wellness trend</h1>
+    <p class="muted">
+      {{ child.full_name }} ·
+      {{ period_days }}-day windows · {{ trend_periods }} weeks shown ·
+      latest window ends {{ as_of|date:"j M Y" }}
+    </p>
+  </div>
+  <div class="detail-actions">
+    <a class="btn btn-quiet" href="{{ back_url }}">Back to profile</a>
+  </div>
+</header>
+
+<div class="card card-tinted">
+  <p>
+    <strong>These are summaries, not diagnoses.</strong>
+    Each point averages the structured ratings recorded in a {{ period_days }}-day
+    window and scales them to 0–100, where higher is better. Free-text notes are
+    never read by the scoring code. A score with a <em>thin</em> confidence label
+    is one or two observations, and should be read as a question, not a finding.
+  </p>
+</div>
+
+{% if not has_any_data %}
+  <div class="empty">
+    <p class="empty-mark" aria-hidden="true">◌</p>
+    <h3>No scores yet</h3>
+    <p class="muted">
+      There are no structured entries in the last {{ trend_periods }} weeks.
+      A score appears once there is something to average. An empty chart is
+      honest; a chart of zeros would not be.
+    </p>
+  </div>
+{% else %}
+  <section class="section">
+    <div class="section-head">
+      <h2>{{ overall_card.label }}</h2>
+      <span class="pill">Weighted across domains</span>
+    </div>
+
+    <article class="card chart-card">
+      <div class="chart-head">
+        <div>
+          <h3>Last {{ trend_periods }} weeks</h3>
+          <p class="muted small">
+            The shaded band is this child's own 28-day baseline
+            (mean ± one standard deviation), not a population average.
+          </p>
+        </div>
+        <div class="chart-latest-wrap">
+          {% if overall_card.latest %}
+            <p class="chart-latest">{{ overall_card.latest.value|floatformat:1 }}<span class="chart-scale">/100</span></p>
+            <p class="small">
+              <span class="badge badge-conf-{{ overall_card.latest.confidence }}">
+                {{ overall_card.confidence_label }}
+              </span>
+              <span class="muted">{{ overall_card.latest.data_points }} day{{ overall_card.latest.data_points|pluralize }}</span>
+            </p>
+            {% if overall_card.change %}
+              <p class="delta delta-{{ overall_card.change.direction }}">
+                {% if overall_card.change.direction == 'up' %}▲ +{{ overall_card.change.value|floatformat:1 }}
+                {% elif overall_card.change.direction == 'down' %}▼ {{ overall_card.change.value|floatformat:1 }}
+                {% else %}▬ {{ overall_card.change.value|floatformat:1 }}{% endif %}
+                <span class="muted">vs {{ overall_card.change.weeks }} weeks ago</span>
+              </p>
+            {% endif %}
+          {% else %}
+            <p class="chart-latest muted">—</p>
+            <p class="small muted">No data in the latest window</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% include "analytics/_line_chart.html" with chart=overall_card.chart %}
+
+      {% if overall_card.baseline %}
+        <p class="muted small">
+          Baseline {{ overall_card.baseline.mean|floatformat:1 }}
+          {% if overall_card.baseline.stddev %}
+            ± {{ overall_card.baseline.stddev|floatformat:1 }}
+          {% endif %}
+          from {{ overall_card.baseline.sample_size }} day{{ overall_card.baseline.sample_size|pluralize }}
+          of data.
+        </p>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2>By domain</h2>
+      <span class="pill">{{ domain_cards|length }} domains</span>
+    </div>
+
+    <div class="chart-grid">
+      {% for card in domain_cards %}
+        <article class="card chart-card">
+          <div class="chart-head">
+            <div>
+              <h3>{{ card.label }}</h3>
+              <p class="muted small">{{ card.weight_pct }}% of the overall score</p>
+            </div>
+            <div class="chart-latest-wrap">
+              {% if card.latest %}
+                <p class="chart-latest">{{ card.latest.value|floatformat:1 }}</p>
+                <p class="small">
+                  <span class="badge badge-conf-{{ card.latest.confidence }}">{{ card.confidence_label }}</span>
+                </p>
+              {% else %}
+                <p class="chart-latest muted">—</p>
+              {% endif %}
+            </div>
+          </div>
+
+          {% include "analytics/_line_chart.html" with chart=card.chart %}
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="section">
+    <details class="card">
+      <summary><strong>How this score is calculated</strong></summary>
+      <div class="method-body">
+        <p>
+          Each domain is first turned into a daily value between 0 and 1, then
+          averaged over a {{ period_days }}-day window and multiplied by 100.
+          The overall score applies these weights to whichever domains have data
+          on a given day, renormalised so missing domains are not counted as
+          zero. It needs at least two domains on that day; otherwise there is no
+          overall score for that day.
+        </p>
+
+        <table class="table">
+          <thead>
+            <tr><th scope="col">Domain</th><th scope="col">Weight</th><th scope="col">What is measured</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Emotional wellness</td><td>{{ weights.0.percent }}%</td><td>Mood, energy, sleep quality and felt connection (1–5 ratings)</td></tr>
+            <tr><td>Academic progress</td><td>{{ weights.1.percent }}%</td><td>Marks as a share of the maximum available</td></tr>
+            <tr><td>Healthy habits</td><td>{{ weights.2.percent }}%</td><td>Sleep, activity, screen time, nutrition and breakfast against age-appropriate guidelines</td></tr>
+            <tr><td>Social development</td><td>{{ weights.3.percent }}%</td><td>Peer relationships, participation, cooperation, conflict and belonging (1–5 ratings)</td></tr>
+          </tbody>
+        </table>
+
+        <p class="muted small">
+          Confidence is about coverage, not certainty: <em>good</em> means the
+          window contains enough reporting days for this domain's cadence,
+          <em>moderate</em> means about half, and <em>thin</em> means one or two
+          entries. Method version {{ method_version }}. Recomputing from the same
+          entries with the same version produces the same numbers.
+        </p>
+      </div>
+    </details>
+  </section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Cohort wellness · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <span>Cohort wellness</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">Institution overview · aggregate only</p>
+  <h1>Cohort wellness</h1>
+  <p class="muted">
+    Averages and counts across the school. No child is named on this page,
+    because the administrator's grant on scores is <strong>aggregate</strong>,
+    not read. Individual trends belong to the mentor and guardian who know the
+    child.
+  </p>
+</header>
+
+<section class="stat-grid" aria-label="Cohort statistics">
+  <article class="stat">
+    <p class="stat-label">Children with a score</p>
+    <p class="stat-value">{{ snapshot.children_scored }}</p>
+    <p class="stat-foot">of {{ snapshot.children_total }} active children</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Average overall</p>
+    <p class="stat-value">
+      {% if snapshot.average is not None %}{{ snapshot.average|floatformat:1 }}{% else %}—{% endif %}
+    </p>
+    <p class="stat-foot">0–100, higher is better</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Latest window</p>
+    <p class="stat-value chart-date">{{ as_of|date:"j M" }}</p>
+    <p class="stat-foot">{{ period_days }}-day window ending today</p>
+  </article>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Average overall score</h2>
+    <span class="pill">Last {{ trend_periods }} weeks</span>
+  </div>
+
+  <article class="card chart-card">
+    {% include "analytics/_line_chart.html" with chart=snapshot.chart %}
+    <p class="muted small">
+      The cohort average can look stable while individual children move in
+      opposite directions. This page is for capacity and staffing questions; the
+      per-child trend is where a change is noticed.
+    </p>
+  </article>
+</section>
+
+<div class="two-col section">
+  <article class="card">
+    <h2>Average by domain</h2>
+    <table class="table">
+      <thead>
+        <tr><th scope="col">Domain</th><th scope="col">Average</th><th scope="col">Children</th></tr>
+      </thead>
+      <tbody>
+        {% for row in snapshot.domains %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{% if row.average is not None %}{{ row.average|floatformat:1 }}{% else %}<span class="muted">No data</span>{% endif %}</td>
+            <td>{{ row.children }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+
+  <article class="card">
+    <h2>Distribution</h2>
+    <p class="muted small">Children with an overall score, by band.</p>
+    <ul class="dist-list">
+      {% for bucket in snapshot.buckets %}
+        <li>
+          <span class="dist-label">{{ bucket.label }}</span>
+          <span class="dist-bar" aria-hidden="true"><span style="width: {{ bucket.share }}%"></span></span>
+          <span class="dist-count">{{ bucket.count }}</span>
+        </li>
+      {% empty %}
+        <li class="muted">No scores yet.</li>
+      {% endfor %}
+    </ul>
+
+    <h3 class="dist-heading">Confidence</h3>
+    <ul class="pill-row">
+      {% for item in snapshot.confidence %}
+        <li class="pill">{{ item.label }}: {{ item.count }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+</div>
+
+<section class="section">
+  <div class="card">
+    <h2>What this page deliberately cannot do</h2>
+    <p class="muted">
+      It cannot open a child's trend, sort children by score, or export a ranked
+      list. Ranking children by a composite wellness score would turn a
+      monitoring tool into a league table, and would make the score a target to
+      game rather than a prompt to look closer.
+    </p>
+    <p class="muted small">
+      Method version {{ method_version }} · {{ period_days }}-day rolling windows.
+      Scores are recomputed from structured entries only; free-text notes are
+      never read by the scoring code.
+    </p>
+  </div>
+</section>
+{% endblock %}
