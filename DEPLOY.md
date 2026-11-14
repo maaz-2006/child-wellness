@@ -133,8 +133,15 @@ cd ~/child-wellness
 git pull
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py recompute_wellness   # rebuild derived scores/baselines
 python manage.py collectstatic --noinput
 ```
+
+`recompute_wellness` is only needed when the scoring method changes or the raw
+data was imported outside the web app. It is safe to run every deploy: it
+deletes and rebuilds the stored windows, and the same entries always produce the
+same numbers for a given `method_version`. The score tables are derived, so a
+missing run shows empty trends, not wrong ones.
 
 Then **Reload** in the Web tab. Reload is required every time — changes to disk
 are not picked up by the running process.
