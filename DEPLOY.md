@@ -153,10 +153,9 @@ authenticated boundary, not just that pages render:
 | `child.halima` | `/children/<own>/messages/new/` | 403 |
 | `MohammedMaaz` | `/cohort/model/` | aggregate benchmark only, no child rows |
 
-These were checked against the live host on 2026-11-15 (D6) for the three demo
-accounts; the `MohammedMaaz` row is covered by the local test run and should be
-spot-checked in the browser, since the superuser keeps its own password. The
-parent/mentor thread sets differ on purpose: `parent.halima` sees only her own
+These were checked against the live host on 2026-11-15 (D6) for all four
+accounts, including the `MohammedMaaz` superuser and the aggregate model report.
+The parent/mentor thread sets differ on purpose: `parent.halima` sees only her own
 child's conversation, `ruth` sees every thread for the children assigned to her,
 and a guessed thread id for an unrelated child returns 403 because the gate is
 the child, not the thread.
