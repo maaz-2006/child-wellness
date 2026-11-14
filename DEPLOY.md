@@ -137,6 +137,34 @@ Useful surfaces to verify after a D5+D6 deploy:
 | `/alerts/999999/` | 404, not a 500 |
 | `/messages/999999/` | 404, not a 500 |
 
+Then sign in as the demo accounts (`kito-demo-2026`) and confirm the
+authenticated boundary, not just that pages render:
+
+| Sign in as | URL | Expected |
+|---|---|---|
+| `parent.halima` | `/messages/` | inbox with one thread; thread opens, reply form present |
+| `parent.halima` | `/messages/<a thread from another family>/` | 403, not a sign-in redirect |
+| `parent.halima` | `/cohort/model/` | 403 |
+| `parent.halima` | `/django-admin/` | redirect to the admin sign-in |
+| `ruth` | `/messages/` | two threads, one of them not visible to the parent |
+| `ruth` | `/cohort/model/` | 403 |
+| `child.halima` | `/messages/` and `/messages/1/` | 403 |
+| `child.halima` | `/children/<own>/wellness/` | 403 (children never see their own score) |
+| `child.halima` | `/children/<own>/messages/new/` | 403 |
+| `MohammedMaaz` | `/cohort/model/` | aggregate benchmark only, no child rows |
+
+These were checked against the live host on 2026-11-15 (D6) for the three demo
+accounts; the `MohammedMaaz` row is covered by the local test run and should be
+spot-checked in the browser, since the superuser keeps its own password. The
+parent/mentor thread sets differ on purpose: `parent.halima` sees only her own
+child's conversation, `ruth` sees every thread for the children assigned to her,
+and a guessed thread id for an unrelated child returns 403 because the gate is
+the child, not the thread.
+
+Because the site is HTTPS, Django also enforces the `Referer` check on POST. That
+is why a scripted sign-in must send
+`Referer: https://Maaz2006.pythonanywhere.com/login/`; see Troubleshooting.
+
 ---
 
 ## 8. Deploying later updates
@@ -226,6 +254,13 @@ source ~/.virtualenvs/kito/bin/activate
 **403 Forbidden / CSRF verification failed**
 `DJANGO_CSRF_TRUSTED_ORIGINS` must include the scheme and exact host:
 `https://Maaz2006.pythonanywhere.com`.
+
+If the browser signs in but a scripted `curl`/`fetch` login returns 403, the
+cookie and form token are probably fine — over HTTPS Django also enforces the
+`Referer` check on POST. Send
+`-H "Referer: https://maaz2006.pythonanywhere.com/login/"`. Without it the
+request is rejected with the same generic 403 page that a bad token produces,
+and no reason is shown because `DEBUG` is false.
 
 **DisallowedHost**
 `DJANGO_ALLOWED_HOSTS` must contain `Maaz2006.pythonanywhere.com` (no scheme).
