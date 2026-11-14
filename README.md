@@ -209,10 +209,10 @@ difficult week, not a case.
 
 **Evaluation.** `manage.py backtest_alerts` replays the rules over the synthetic
 cohort's labelled trajectories and reports child-level precision, recall and
-median lead time. The demo cohort currently gives precision 0.70, recall 1.00
-and a median lead time of 10 days after simulated onset (3 false positives out
-of 15 negative children). Ground truth is synthetic: these figures measure the
-rules against the generator's labels, not against clinical outcomes.
+onset-to-alert delay. The demo cohort currently gives precision 0.70, recall 1.00
+and a median delay of 10 days from simulated onset to first alert (3 false
+positives out of 15 negative children). Ground truth is synthetic: these figures
+measure the rules against the generator's labels, not against clinical outcomes.
 
 ## Stakeholder messages (D6)
 
@@ -327,7 +327,7 @@ Useful commands:
 | `python manage.py recompute_wellness` | Rebuild every stored score and baseline |
 | `python manage.py evaluate_alerts` | Run the alert rules and persist findings |
 | `python manage.py evaluate_alerts --dry-run` | Show what would fire without writing |
-| `python manage.py backtest_alerts --weeks 8` | Precision, recall and lead time on the synthetic cohort |
+| `python manage.py backtest_alerts --weeks 8` | Precision, recall and onset-to-alert delay on the synthetic cohort |
 | `python manage.py ml_report` | Re-run the offline classifier benchmark and store an aggregate report |
 | `python manage.py cohort_report` | Verify the archetypes behave differently |
 | `python scripts/check_compat.py` | Fail if anything needs > Python 3.13 |

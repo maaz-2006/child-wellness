@@ -206,7 +206,7 @@ is too small.
 
 `backtest_alerts` is an evaluation tool, not part of a deploy. It replays the
 rules over the labelled synthetic trajectories and prints precision, recall and
-median lead time; it restores the current scores when it finishes. Do not run it
+onset-to-alert delay; it restores the current scores when it finishes. Do not run it
 against a real cohort.
 
 ### Updating an existing demo database from D4/D5 to D6
