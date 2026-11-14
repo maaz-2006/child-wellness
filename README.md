@@ -107,8 +107,8 @@ only emotional check-ins gets no overall score, and the page says why.
 unmeasured child as unwell.
 
 **Baselines.** For each child and domain the platform stores a 28-day mean and
-standard deviation. That personal band is what the charts shade and what D5's
-alert engine will compare against — not a population average, because the
+standard deviation. That personal band is what the charts shade and what the
+alert engine compares against — not a population average, because the
 population includes children whose normal is already a concern.
 
 **Confidence is coverage, not certainty.** Labels are set per domain's natural
@@ -132,6 +132,88 @@ makes a two-point wobble look like a crisis), gaps that break the line, and the
 same numbers repeated in a `<details>` table so the chart is never the only way
 to read the data.
 
+## Early-warning alerts (D5)
+
+Scores describe; alerts route attention. The engine in `alerts/` turns stored
+scores, baselines and the guardian pulse into findings, and every finding is
+persisted as an alert owned by a named person.
+
+**Rules are deterministic and explainable.** Each finding embeds the numbers
+that produced it, so a mentor can answer "why did this fire?" a week later
+without re-running a model. There is no machine-learning classifier in the
+production path.
+
+| Rule | Tier | Fires when |
+|---|---|---|
+| `overall_very_low` | urgent | Two consecutive reasonably-covered weeks at or below 35/100 |
+| `overall_below_baseline` | concern | Latest overall score is ≥1.5 SD below the child's own 28-day baseline |
+| `sustained_low` | concern | Three consecutive weeks at or below 45/100 |
+| `declining_trend` | watch | Overall score falls ≥10 points versus four weeks earlier |
+| `domain_below_baseline:<domain>` | watch | A domain falls ≥1.5 SD below that child's own baseline |
+| `multiple_domains_low` | concern | Two or more domains at or below 50/100 in the latest window |
+| `no_recent_data` | watch | Entries earlier in the eight-week window but none in the latest week |
+| `guardian_pulse_low` | concern | Two consecutive weekly guardian pulses rate the week difficult |
+| `safeguarding_signal:<category>` | urgent | Free text matches a short behavioural phrase list (self-harm, harm by others, unsafe home, neglect) |
+
+Three constraints keep the queue meaningful:
+
+- **A child is compared with themselves.** Baselines are the child's own recent
+  mean and standard deviation, not a class average; a child whose normal is low
+  is not flagged for being consistently themselves.
+- **Confidence gates severity.** Score rules require at least `moderate`
+  coverage. A single blip cannot become an urgent alert, and a missing week is a
+  gap, not a zero.
+- **One overall alert per child per run, and one rolling alert per rule.** A
+  child in difficulty produces one explainable overall alert rather than four
+  overlapping ones. Re-running the engine updates the open alert, increments
+  `occurrences` only on a new day, and never downgrades a tier or auto-resolves.
+
+**Assignment.** Urgent and safeguarding findings go to `School.safeguarding_lead`
+when one is named; otherwise to the child's class teacher, then mentor, then
+counsellor. An unassigned alert is a notification nobody reads, so the engine
+always looks for a person first.
+
+**Safeguarding screening is a safety net, not a classifier.** Matched phrases are
+short and behavioural. The alert stores the category, date and entry reference —
+**never the note text**. The original note stays in its domain table under that
+domain's access rule, so a safeguarding queue cannot become a second, less
+protected copy of a child's diary. A match is always urgent and is never
+auto-notified or shared with a guardian; the designated lead follows the
+school's procedure and speaks to the family directly.
+
+**Guardian sharing is an explicit mentor action.** A non-urgent alert can be
+shared with the child's guardians; internal case notes and evidence stay private.
+Urgent alerts cannot be shared at all, and sharing is refused when the child has
+no active guardian consent.
+
+**Case timeline is append-only.** Acknowledge, note, resolve, dismiss and share
+all go through `alerts/services.py`, which refuses transitions on a closed alert.
+Every action is audited. The administrator sees cohort counts only — no child
+names, no case notes.
+
+**What a guardian sees.** `/alerts/family/` shows only updates a mentor chose to
+share, plus this week's pulse. It never shows scores, tiers, case notes, other
+families, or urgent safeguarding matters.
+
+## Guardian pulse (D5)
+
+`/children/<id>/pulse/` is a guardian's own channel: two ratings (the child's
+week, and how supported the family feels) and an optional 600-character comment,
+one response per guardian per child per week. A mentor assigned to the child can
+read the history; the administrator sees aggregate participation and averages
+only, with no names and no comments. The scoring and alert code reads the two
+ratings only — the comment is for a human.
+
+Two consecutive low weeks raise a `concern` alert. One difficult week is a
+difficult week, not a case.
+
+**Evaluation.** `manage.py backtest_alerts` replays the rules over the synthetic
+cohort's labelled trajectories and reports child-level precision, recall and
+median lead time. The demo cohort currently gives precision 0.70, recall 1.00
+and a median lead time of 12 days after simulated onset (3 false positives out
+of 15 negative children). Ground truth is synthetic: these figures measure the
+rules against the generator's labels, not against clinical outcomes.
+
 ## Local development
 
 ```powershell
@@ -152,6 +234,9 @@ Useful commands:
 |---|---|
 | `python manage.py seed_demo --reset` | Rebuild the synthetic cohort |
 | `python manage.py recompute_wellness` | Rebuild every stored score and baseline |
+| `python manage.py evaluate_alerts` | Run the alert rules and persist findings |
+| `python manage.py evaluate_alerts --dry-run` | Show what would fire without writing |
+| `python manage.py backtest_alerts --weeks 8` | Precision, recall and lead time on the synthetic cohort |
 | `python manage.py cohort_report` | Verify the archetypes behave differently |
 | `python scripts/check_compat.py` | Fail if anything needs > Python 3.13 |
 | `python manage.py check --deploy` | Security posture under production settings |
@@ -164,8 +249,8 @@ core/        User + Role, School, AuditLog, permissions, mixins, audit helpers
 children/    Child, Guardianship, Mentorship, ConsentRecord
 domains/     the four wellness modules (shared base + per-domain models)
 analytics/   scoring engine, baselines, SVG charts, management commands
-alerts/      alert engine, case workflow
-feedback/    structured stakeholder feedback
+alerts/      deterministic rules, alert engine, safeguarding screen, case workflow
+feedback/    weekly guardian pulse and aggregate participation
 templates/   server-rendered pages
 static/      hand-written CSS and vanilla JS (no build step)
 ```

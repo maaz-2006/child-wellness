@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Cohort alerts · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <span>Cohort alerts</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">Institution overview · aggregate only</p>
+  <h1>Early-warning alerts</h1>
+  <p class="muted">
+    Counts of open alerts across the school, and whether the workflow is keeping
+    up. No child is named on this page: the administrator's grant on alerts is
+    <strong>aggregate</strong>, not read. A queue sorted by risk would become a
+    league table of children.
+  </p>
+</header>
+
+<section class="stat-grid" aria-label="Open alerts">
+  <article class="stat">
+    <p class="stat-label">Urgent open</p>
+    <p class="stat-value">{{ by_tier.urgent }}</p>
+    <p class="stat-foot">reviewed by a person today</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Concern open</p>
+    <p class="stat-value">{{ by_tier.concern }}</p>
+    <p class="stat-foot">sustained patterns</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Watch open</p>
+    <p class="stat-value">{{ by_tier.watch }}</p>
+    <p class="stat-foot">trends and data gaps</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Open total</p>
+    <p class="stat-value">{{ by_tier.total }}</p>
+    <p class="stat-foot">across the institution</p>
+  </article>
+</section>
+
+<div class="two-col section">
+  <article class="card">
+    <h2>Last {{ window_days }} days</h2>
+    <table class="table">
+      <thead>
+        <tr><th scope="col">Measure</th><th scope="col">Count</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Alerts opened</td><td>{{ opened_recent }}</td></tr>
+        <tr><td>Resolved</td><td>{{ resolved_recent }}</td></tr>
+        <tr><td>Dismissed with a reason</td><td>{{ dismissed_recent }}</td></tr>
+        <tr><td>Open but unassigned</td><td>{{ unassigned }}</td></tr>
+        <tr><td>Open safeguarding signals</td><td>{{ safeguarding_open }}</td></tr>
+        <tr><td>Alerts shared with guardians</td><td>{{ shared_total }}</td></tr>
+      </tbody>
+    </table>
+  </article>
+
+  <article class="card">
+    <h2>What the counts mean</h2>
+    <p class="muted">
+      A rising open count is not proof that children are less well; it can mean
+      recording has improved or a mentor is on leave. The useful operational
+      question is whether every open item has an owner and whether unresolved
+      items are getting older.
+    </p>
+    <p class="muted small">
+      Urgent items are never auto-notified to a family. The designated
+      safeguarding lead owns them, and the response is a person following the
+      school's procedure.
+    </p>
+    <p class="muted small">
+      This page is as of {{ as_of|date:"j M Y" }}. Alert tiers are ordered cues,
+      not a clinical assessment.
+    </p>
+  </article>
+</div>
+{% endblock %}

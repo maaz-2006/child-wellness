@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Pulse history · {{ child.full_name }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ back_url }}">{{ child.full_name }}</a>
+  <span aria-hidden="true">/</span>
+  <span>Pulse history</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">Guardian voice · last {{ rows|length }} week{{ rows|length|pluralize }}</p>
+  <h1>{{ child.full_name }}'s weekly pulse</h1>
+  <p class="muted">
+    What the adults at home have noticed, week by week. This is context for a
+    conversation, not a score, and the comments are never read by the alert
+    engine.
+  </p>
+</header>
+
+<div class="action-row">
+  {% if can_submit %}
+    <a class="btn btn-primary" href="{% url 'feedback:pulse' child.pk %}">
+      {% if rows and rows.0.week_start == this_week %}Update this week's pulse{% else %}Give this week's pulse{% endif %}
+    </a>
+  {% endif %}
+  <a class="btn btn-quiet" href="{{ back_url }}">Back to {{ child.short_name }}</a>
+</div>
+
+{% if rows %}
+  <div class="table-wrap card">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Week of</th>
+          <th scope="col">Guardian</th>
+          <th scope="col">Child's week</th>
+          <th scope="col">Support from school</th>
+          <th scope="col">Comment</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td class="nowrap">{{ row.week_start|date:"j M Y" }}</td>
+            <td class="nowrap">{{ row.guardian.display_name }}</td>
+            <td class="nowrap">{{ row.get_wellbeing_display }}</td>
+            <td class="nowrap">
+              {% if row.support %}{{ row.get_support_display }}{% else %}<span class="muted">Not answered</span>{% endif %}
+            </td>
+            <td class="note-cell">
+              {% if row.comment %}{{ row.comment }}{% else %}<span class="muted">—</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="empty">
+    <p class="empty-mark" aria-hidden="true">○</p>
+    <h3>No pulse responses yet</h3>
+    <p class="muted">
+      {% if can_submit %}
+        You can give this week's pulse now. It is two ratings and an optional
+        sentence.
+      {% else %}
+        The guardian has not submitted a pulse yet.
+      {% endif %}
+    </p>
+  </div>
+{% endif %}
+
+<section class="section">
+  <div class="card">
+    <h2>How this is used</h2>
+    <p class="muted">
+      Two consecutive difficult weeks raise a <em>concern</em> alert owned by a
+      named mentor. That is deliberately a high bar: one hard week is a hard
+      week, not a case. The comment is read by a person, never by the scoring
+      code.
+    </p>
+  </div>
+</section>
+{% endblock %}

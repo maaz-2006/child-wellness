@@ -48,7 +48,64 @@
     </p>
     <p><a class="btn btn-quiet" href="{% url 'core:permission_matrix' %}">View the enforced access matrix</a></p>
     <p><a class="btn btn-quiet" href="{% url 'analytics:cohort_wellness' %}">Open cohort wellness</a></p>
+    <p><a class="btn btn-quiet" href="{% url 'alerts:cohort' %}">Open cohort alerts</a></p>
+    <p><a class="btn btn-quiet" href="{% url 'feedback:cohort_pulse' %}">Open pulse overview</a></p>
   </section>
+{% endif %}
+
+{% if user.role == role_mentor %}
+  <section class="stat-grid" aria-label="Open alerts">
+    <article class="stat">
+      <p class="stat-label">Urgent</p>
+      <p class="stat-value">{{ alert_counts.urgent }}</p>
+      <p class="stat-foot">review today</p>
+    </article>
+    <article class="stat">
+      <p class="stat-label">Concern</p>
+      <p class="stat-value">{{ alert_counts.concern }}</p>
+      <p class="stat-foot">sustained patterns</p>
+    </article>
+    <article class="stat">
+      <p class="stat-label">Watch</p>
+      <p class="stat-value">{{ alert_counts.watch }}</p>
+      <p class="stat-foot">trends and data gaps</p>
+    </article>
+    <article class="stat">
+      <p class="stat-label">Open total</p>
+      <p class="stat-value">{{ alert_counts.total }}</p>
+      <p class="stat-foot"><a href="{% url 'alerts:queue' %}">Open the queue</a></p>
+    </article>
+  </section>
+{% endif %}
+
+{% if user.role == role_parent %}
+  <div class="two-col section">
+    <article class="card">
+      <h2>This week's pulse</h2>
+      <p class="muted">
+        {% if pulse_due %}
+          {{ pulse_due|length }} child{{ pulse_due|length|pluralize }} still to
+          hear about this week. Two ratings, about a minute.
+        {% else %}
+          Thank you — every child linked to you has a pulse response this week.
+        {% endif %}
+      </p>
+      <p><a class="btn btn-primary" href="{% url 'alerts:family' %}">Family updates</a></p>
+    </article>
+    <article class="card">
+      <h2>Shared updates</h2>
+      <p class="muted">
+        {% if alert_counts.shared %}
+          {{ alert_counts.shared }} update{{ alert_counts.shared|pluralize }} a
+          mentor has chosen to share with you.
+        {% else %}
+          Nothing shared this week. Internal scores and case notes are not shown
+          here by design.
+        {% endif %}
+      </p>
+      <p><a class="btn btn-quiet" href="{% url 'alerts:family' %}">See updates</a></p>
+    </article>
+  </div>
 {% endif %}
 
 <section class="section">

@@ -35,6 +35,30 @@
               <span aria-hidden="true">✎</span> Check in
             </a>
           {% endif %}
+          {% if user.role == role_mentor %}
+            <a class="nav-item {% if request.resolver_match.url_name == 'queue' %}is-active{% endif %}"
+               href="{% url 'alerts:queue' %}">
+              <span aria-hidden="true">!</span> Alerts
+            </a>
+          {% endif %}
+          {% if user.role == role_parent %}
+            <a class="nav-item {% if request.resolver_match.url_name == 'family' %}is-active{% endif %}"
+               href="{% url 'alerts:family' %}">
+              <span aria-hidden="true">✉</span> Family updates
+            </a>
+          {% endif %}
+          {% if is_platform_admin %}
+            <a class="nav-item {% if request.resolver_match.url_name == 'cohort' %}is-active{% endif %}"
+               href="{% url 'alerts:cohort' %}">
+              <span aria-hidden="true">!</span> Cohort alerts
+            </a>
+          {% endif %}
+          {% if is_platform_admin %}
+            <a class="nav-item {% if request.resolver_match.url_name == 'cohort_pulse' %}is-active{% endif %}"
+               href="{% url 'feedback:cohort_pulse' %}">
+              <span aria-hidden="true">◔</span> Pulse overview
+            </a>
+          {% endif %}
           {% if is_platform_admin %}
             <a class="nav-item {% if request.resolver_match.url_name == 'cohort_wellness' %}is-active{% endif %}"
                href="{% url 'analytics:cohort_wellness' %}">

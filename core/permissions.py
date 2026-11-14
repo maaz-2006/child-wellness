@@ -135,7 +135,10 @@ MATRIX: dict[tuple[str, str], dict[str, Access]] = {
         Resource.CASE_NOTE: Access.NONE,
         Resource.MESSAGE: Access.WRITE,
         Resource.CONSENT: Access.SUMMARY,
-        Resource.FEEDBACK: Access.WRITE,
+        # A child does not fill in a guardian pulse; emotional self-report is
+        # the child's own channel. Left NONE so this resource cannot become a
+        # back door to reading what a guardian wrote.
+        Resource.FEEDBACK: Access.NONE,
         Resource.CONFIG: Access.NONE,
         Resource.AUDIT: Access.NONE,
     },
@@ -171,7 +174,9 @@ AUDITED_RESOURCES = {
     Resource.SOCIAL,
     Resource.HABITS,
     Resource.SCORE,
+    Resource.ALERT,
     Resource.CASE_NOTE,
+    Resource.FEEDBACK,
     Resource.AUDIT,
 }
 

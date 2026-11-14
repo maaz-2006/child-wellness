@@ -43,6 +43,7 @@ from domains.models import (
     SocialObservation,
     Source,
 )
+from feedback.models import PulseResponse, current_week_start
 
 DEMO_PASSWORD = "kito-demo-2026"
 DEMO_EMAIL_DOMAIN = "demo.kito.local"
@@ -128,13 +129,83 @@ class Command(BaseCommand):
             children = self._children(school, mentors)
             self._generate(children)
 
+        # The designated safeguarding lead must exist before the engine runs,
+        # because urgent and safeguarding alerts are assigned to that named
+        # person at creation time.
+        if school.safeguarding_lead_id is None and mentors:
+            school.safeguarding_lead = mentors[2] if len(mentors) > 2 else mentors[0]
+            school.save(update_fields=["safeguarding_lead"])
+
         # Scores are derived data, so they are computed after the raw rows are
         # committed. Seeding a demo without this step would leave every trend
         # chart empty and make the platform look broken rather than uncomputed.
         from analytics import scoring
 
         self.scores = scoring.recompute_all(as_of=self.end)
+        self._pulse(children)
+
+        from alerts import engine
+
+        self.alerts = engine.evaluate_all(as_of=self.end)
         self._report(school, children)
+
+    def _pulse(self, children: list[Child]) -> None:
+        """Create a few weeks of guardian pulse responses for the demo.
+
+        The pulse is correlated with the synthetic archetype so that a declining
+        child's guardian also reports difficult weeks. That makes the
+        guardian-pulse rule demonstrable without inventing a second, unrelated
+        dataset.
+        """
+        this_week = current_week_start(self.end)
+        created = 0
+        for child in children:
+            if not child.has_consent:
+                continue
+            label = child.scenario_label
+            guardian_link = (
+                child.guardianships.filter(is_primary=True).first()
+                or child.guardianships.first()
+            )
+            if guardian_link is None:
+                continue
+
+            for offset in range(4):
+                week_start = this_week - timedelta(days=7 * offset)
+                if label.archetype == ScenarioLabel.Archetype.SPARSE and offset % 2:
+                    continue
+
+                if label.archetype in (
+                    ScenarioLabel.Archetype.GRADUAL_DECLINE,
+                    ScenarioLabel.Archetype.SUDDEN_EVENT,
+                ) and label.onset_date and week_start >= label.onset_date - timedelta(days=7):
+                    wellbeing = 2
+                    support = 2
+                elif (
+                    label.archetype == ScenarioLabel.Archetype.RECOVERING
+                    and label.onset_date
+                    and week_start < label.onset_date
+                ):
+                    wellbeing = 2
+                    support = 3
+                elif label.archetype == ScenarioLabel.Archetype.HEALTHY:
+                    wellbeing = 5 if self.rng.random() < 0.6 else 4
+                    support = 4
+                else:
+                    wellbeing = 3
+                    support = 3
+
+                PulseResponse.objects.create(
+                    child=child,
+                    guardian=guardian_link.parent,
+                    week_start=week_start,
+                    wellbeing=wellbeing,
+                    support=support,
+                    comment="",
+                )
+                created += 1
+
+        self.counts["pulse responses"] = created
 
     # ------------------------------------------------------------------
     def _reset(self) -> None:
@@ -512,6 +583,14 @@ class Command(BaseCommand):
         scores = getattr(self, "scores", None)
         if scores:
             self.stdout.write(f"  {'wellness scores':<20}{scores['scores']}")
+        alerts = getattr(self, "alerts", None)
+        if alerts:
+            self.stdout.write(
+                f"  {'alerts opened/seen':<20}{alerts['alerts']} "
+                f"(urgent {alerts['by_tier'].get('urgent', 0)}, "
+                f"concern {alerts['by_tier'].get('concern', 0)}, "
+                f"watch {alerts['by_tier'].get('watch', 0)})"
+            )
         self.stdout.write("")
         self.stdout.write("  archetypes")
         for archetype, count in sorted(archetypes.items()):

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Family updates · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <span>Family updates</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">For guardians · shared by the school</p>
+  <h1>Family updates</h1>
+  <p class="muted">
+    Updates a mentor has chosen to share with you, plus this week's pulse. This
+    page never shows the care team's internal notes, and urgent safeguarding
+    matters are always handled by a person, not by a notification.
+  </p>
+</header>
+
+<section class="section">
+  <div class="section-head">
+    <h2>This week's pulse</h2>
+    <span class="pill">Week of {{ week_start|date:"j M" }}</span>
+  </div>
+
+  {% if children_due %}
+    <div class="card-grid">
+      {% for child in children_due %}
+        <a class="child-card" href="{% url 'feedback:pulse' child.pk %}">
+          <span class="avatar" aria-hidden="true">{{ child.avatar }}</span>
+          <div class="child-meta">
+            <h3>{{ child.full_name }}</h3>
+            <p class="muted">Two questions, about a minute.</p>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card card-tinted">
+      <p>
+        {% if pulse_answered %}
+          Thank you — your pulse for this week is saved. You can change it any time
+          before the week ends.
+        {% else %}
+          No children are linked to your account with recorded consent yet, so
+          there is no pulse to complete.
+        {% endif %}
+      </p>
+    </div>
+  {% endif %}
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>Shared updates</h2>
+    <span class="pill">{{ alerts|length }} update{{ alerts|length|pluralize }}</span>
+  </div>
+
+  {% if alerts %}
+    <div class="stack">
+      {% for alert in alerts %}
+        <article class="card">
+          <p class="eyebrow">
+            {{ alert.child.full_name }} · shared {{ alert.guardian_shared_at|date:"j M Y" }}
+          </p>
+          <h3>{{ alert.title }}</h3>
+          <p>{{ alert.summary }}</p>
+          <p class="muted small">
+            This is a summary written for you. If it raises a question, reply to
+            the mentor or ask at the next meeting; the internal case notes stay
+            with the care team.
+          </p>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-mark" aria-hidden="true">○</p>
+      <h3>Nothing shared yet</h3>
+      <p class="muted">
+        A mentor will share an update here when there is something you should
+        know about. No news is not the same as a hidden concern: routine scores
+        and internal notes are never shown, and a school that shared every rule
+        firing would be sending you alarm rather than information.
+      </p>
+    </div>
+  {% endif %}
+</section>
+
+<section class="section">
+  <div class="card">
+    <h2>What you will not see here</h2>
+    <ul class="plain-list">
+      <li>Your child's composite wellness score, tier or ranking.</li>
+      <li>Another family's updates, or another guardian's pulse answers.</li>
+      <li>The care team's case notes.</li>
+      <li>Urgent safeguarding alerts. Those are handled by the designated lead
+        under the school's safeguarding procedure.</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}

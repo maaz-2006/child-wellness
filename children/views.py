@@ -22,6 +22,7 @@ from core.models import AuditLog, Role
 from core.permissions import Access, Resource
 from domains import access
 from domains.registry import DOMAINS
+from feedback.services import history_for as pulse_history
 
 from .models import Guardianship, Mentorship
 
@@ -71,7 +72,36 @@ class ChildDetailView(ChildScopedMixin, TemplateView):
         can_view_scores = permissions.has_access(
             user, child, Resource.SCORE, Access.READ
         )
+        can_view_alerts = permissions.has_access(
+            user, child, Resource.ALERT, Access.READ
+        )
+        can_view_shared_alerts = (
+            user.role == Role.PARENT
+            and permissions.has_access(user, child, Resource.ALERT, Access.SUMMARY)
+        )
+        can_view_pulse = permissions.has_access(
+            user, child, Resource.FEEDBACK, Access.READ
+        )
+        can_submit_pulse = (
+            user.role == Role.PARENT
+            and permissions.has_access(user, child, Resource.FEEDBACK, Access.WRITE)
+        )
         is_self = user.role == Role.CHILD and getattr(user, "child_profile", None) == child
+
+        from alerts.models import Alert
+
+        alerts = Alert.objects.none()
+        if can_view_alerts:
+            alerts = Alert.objects.filter(
+                child=child,
+                status__in=[Alert.Status.OPEN, Alert.Status.ACKNOWLEDGED],
+            ).select_related("assigned_to")[:5]
+        elif can_view_shared_alerts:
+            alerts = Alert.objects.filter(
+                child=child,
+                guardian_shared_at__isnull=False,
+                tier__in=[Alert.Tier.WATCH, Alert.Tier.CONCERN],
+            ).exclude(status=Alert.Status.DISMISSED)[:5]
 
         # Guardians and mentors are shown to staff as part of the care picture.
         # A child sees neither: who is assigned to them is an administrative
@@ -107,6 +137,17 @@ class ChildDetailView(ChildScopedMixin, TemplateView):
                 "observe_url": reverse("domains:emotional_observe", args=[child.pk]),
                 "checkin_url": reverse("domains:checkin"),
                 "can_checkin": is_self and child.has_consent,
+                "alerts": alerts,
+                "can_view_alerts": can_view_alerts,
+                "can_view_shared_alerts": can_view_shared_alerts,
+                "alert_queue_url": reverse("alerts:queue"),
+                "pulse_rows": pulse_history(child, limit=3) if can_view_pulse else [],
+                "can_view_pulse": can_view_pulse,
+                "can_submit_pulse": can_submit_pulse,
+                "pulse_url": reverse("feedback:pulse", args=[child.pk]),
+                "pulse_history_url": reverse(
+                    "feedback:pulse_history", args=[child.pk]
+                ),
             }
         )
         return context

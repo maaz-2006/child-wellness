@@ -613,6 +613,61 @@ textarea { resize: vertical; min-height: 96px; }
 .dist-heading { margin: 18px 0 8px; }
 .pill-row { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 7px; }
 
+/* ---------- Alerts and pulse (D5) -------------------------------------- */
+.filter-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.filter-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+
+.badge-open         { background: var(--info-soft); color: var(--info); border-color: #cfe1ee; }
+.badge-acknowledged { background: var(--warn-soft); color: var(--warn); border-color: #f2ddba; }
+.badge-resolved     { background: var(--good-soft); color: var(--good); border-color: #c8e8d6; }
+.badge-dismissed    { background: #f0f2f3; color: #6b7c88; border-color: #e1e7ea; }
+
+.plain-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; color: var(--ink-soft); }
+.plain-list li { line-height: 1.5; }
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--gap);
+}
+.action-grid .card { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+.action-grid .card h3 { margin: 0; }
+.action-grid textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  font: inherit;
+  resize: vertical;
+}
+
+.alert-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.alert-row h3 { margin: .2em 0; }
+.alert-row .btn { flex: 0 0 auto; }
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 0 8px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.timeline-item { position: relative; padding-left: 20px; }
+.timeline-dot {
+  position: absolute;
+  left: -15px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--brand);
+  border: 2px solid var(--surface);
+}
+.timeline-meta { margin: 0 0 .3em; font-size: .82rem; color: var(--muted); }
+.timeline-body p:last-child { margin-bottom: 0; }
+
 /* ---------- Responsive -------------------------------------------------- */
 @media (max-width: 900px) {
   .shell { grid-template-columns: 1fr; }

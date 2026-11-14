@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Pulse overview · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <span>Pulse overview</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">Institution overview · aggregate only</p>
+  <h1>Guardian pulse</h1>
+  <p class="muted">
+    Whether families are being heard from, and how they describe the week at
+    home. No names and no comments: the administrator's grant on feedback is
+    aggregate, and a comment written by a parent about their child is not an
+    institutional statistic.
+  </p>
+</header>
+
+<section class="stat-grid" aria-label="Pulse participation">
+  <article class="stat">
+    <p class="stat-label">Children reached</p>
+    <p class="stat-value">{{ snapshot.children_reached }}</p>
+    <p class="stat-foot">of {{ snapshot.children_total }} active children ({{ snapshot.reach_share }}%)</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Responses</p>
+    <p class="stat-value">{{ snapshot.responses }}</p>
+    <p class="stat-foot">week of {{ snapshot.week_start|date:"j M" }}</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Average wellbeing</p>
+    <p class="stat-value">
+      {% if snapshot.average_wellbeing is not None %}{{ snapshot.average_wellbeing|floatformat:1 }}{% else %}—{% endif %}
+    </p>
+    <p class="stat-foot">out of 5, guardian-rated</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Average support</p>
+    <p class="stat-value">
+      {% if snapshot.average_support is not None %}{{ snapshot.average_support|floatformat:1 }}{% else %}—{% endif %}
+    </p>
+    <p class="stat-foot">how supported families feel</p>
+  </article>
+</section>
+
+<div class="two-col section">
+  <article class="card">
+    <h2>This week's distribution</h2>
+    <ul class="dist-list">
+      {% for row in snapshot.distribution %}
+        <li>
+          <span class="dist-label">{{ row.label }}</span>
+          <span class="dist-bar" aria-hidden="true"><span style="width: {{ row.share }}%"></span></span>
+          <span class="dist-count">{{ row.count }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="muted small">
+      Guardian-rated, not clinically assessed. A low average is a prompt to ask
+      families what would help, not a diagnosis of the cohort.
+    </p>
+  </article>
+
+  <article class="card">
+    <h2>Participation, last {{ snapshot.trend|length }} weeks</h2>
+    <table class="table">
+      <thead>
+        <tr><th scope="col">Week</th><th scope="col">Children</th><th scope="col">Average</th></tr>
+      </thead>
+      <tbody>
+        {% for row in snapshot.trend %}
+          <tr>
+            <td class="nowrap">{{ row.label }}</td>
+            <td>{{ row.children }}</td>
+            <td>{% if row.average is not None %}{{ row.average|floatformat:1 }}{% else %}<span class="muted">No responses</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted small">
+      Participation is a coverage measure. A high average from five families is
+      not a statement about the school.
+    </p>
+  </article>
+</div>
+
+<section class="section">
+  <div class="card">
+    <h2>What this page deliberately cannot do</h2>
+    <p class="muted">
+      It cannot open one family's responses, read a comment, or rank children by
+      how their guardian rated the week. The child's mentor can see the history
+      for a child they are assigned to; that is where the context belongs.
+    </p>
+  </div>
+</section>
+{% endblock %}

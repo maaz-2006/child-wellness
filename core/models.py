@@ -8,6 +8,7 @@ accept the weaker referential guarantee, because an audit row must survive the
 deletion of the thing it describes anyway.
 """
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -75,6 +76,17 @@ class School(models.Model):
     name = models.CharField(max_length=160)
     short_name = models.CharField(max_length=40, blank=True)
     timezone = models.CharField(max_length=64, default="Africa/Nairobi")
+    #: The named person safeguarding signals are routed to. Deliberately a
+    #: foreign key to a real account rather than a generic "admin" inbox: an
+    #: alert that reaches nobody is worse than no alert at all.
+    safeguarding_lead = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="safeguarding_schools",
+        help_text="Designated safeguarding lead for this school.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -108,6 +120,10 @@ class AuditLog(models.Model):
         EXPORT = "export", "Exported"
         ALERT_ACK = "alert_ack", "Acknowledged alert"
         ALERT_DISMISS = "alert_dismiss", "Dismissed alert"
+        ALERT_NOTE = "alert_note", "Added case note"
+        ALERT_RESOLVE = "alert_resolve", "Resolved alert"
+        ALERT_SHARE = "alert_share", "Shared alert with guardian"
+        SAFEGUARDING = "safeguarding", "Raised safeguarding alert"
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     actor = models.ForeignKey(

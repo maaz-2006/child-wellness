@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Alerts · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <span>Alerts</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">Early warning · assigned children</p>
+  <h1>Alert queue</h1>
+  <p class="muted">
+    Each alert belongs to a named person. Rule findings are explainable from the
+    numbers recorded with them; the queue is a prompt to look closer, not a
+    diagnosis or a ranking.
+  </p>
+</header>
+
+<section class="stat-grid" aria-label="Open alerts">
+  <article class="stat">
+    <p class="stat-label">Urgent</p>
+    <p class="stat-value">{{ counts.urgent }}</p>
+    <p class="stat-foot">review today</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Concern</p>
+    <p class="stat-value">{{ counts.concern }}</p>
+    <p class="stat-foot">sustained or multi-domain</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Watch</p>
+    <p class="stat-value">{{ counts.watch }}</p>
+    <p class="stat-foot">trend or data gap</p>
+  </article>
+  <article class="stat">
+    <p class="stat-label">Open total</p>
+    <p class="stat-value">{{ counts.total }}</p>
+    <p class="stat-foot">across your children</p>
+  </article>
+</section>
+
+<div class="section-head">
+  <h2>Filter</h2>
+  <span class="pill">As of {{ as_of|date:"j M Y" }}</span>
+</div>
+
+<nav class="filter-row" aria-label="Alert filters">
+  {% for key, label in status_filters %}
+    <a class="btn btn-sm {% if status_key == key %}btn-primary{% else %}btn-quiet{% endif %}"
+       href="?status={{ key }}{% if tier_key %}&tier={{ tier_key }}{% endif %}">{{ label }}</a>
+  {% endfor %}
+  <span class="filter-sep" aria-hidden="true"></span>
+  {% for key, label in tier_filters %}
+    <a class="btn btn-sm {% if tier_key == key %}btn-primary{% else %}btn-quiet{% endif %}"
+       href="?status={{ status_key }}{% if key %}&tier={{ key }}{% endif %}">{{ label }}</a>
+  {% endfor %}
+</nav>
+
+<section class="section">
+  {% if alerts %}
+    <div class="table-wrap card">
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Tier</th>
+            <th scope="col">Alert</th>
+            <th scope="col">Child</th>
+            <th scope="col">Opened</th>
+            <th scope="col">Seen</th>
+            <th scope="col">Owner</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for alert in alerts %}
+            <tr>
+              <td><span class="badge tier-{{ alert.tier }}">{{ alert.get_tier_display }}</span></td>
+              <td>
+                <a href="{% url 'alerts:detail' alert.pk %}"><strong>{{ alert.title }}</strong></a>
+                <p class="muted small">{{ alert.rule_key }}</p>
+              </td>
+              <td class="nowrap">{{ alert.child.full_name }}</td>
+              <td class="nowrap">{{ alert.opened_on|date:"j M" }}</td>
+              <td class="nowrap">{{ alert.occurrences }}×</td>
+              <td class="nowrap">
+                {% if alert.assigned_to %}{{ alert.assigned_to.display_name }}{% else %}<span class="muted">Unassigned</span>{% endif %}
+              </td>
+              <td><span class="badge badge-{{ alert.status }}">{{ alert.get_status_display }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty">
+      <p class="empty-mark" aria-hidden="true">○</p>
+      <h3>No alerts in this view</h3>
+      <p class="muted">
+        That is a statement about the recorded data, not about the children.
+        A child with no entries does not generate a low score; it generates a
+        data-gap notice instead.
+      </p>
+    </div>
+  {% endif %}
+</section>
+
+<section class="section">
+  <div class="card card-tinted">
+    <h2>How to read a tier</h2>
+    <ul class="plain-list">
+      <li><strong>Urgent</strong> — two consecutive, well-covered weeks at a very
+        low overall level, or a safeguarding signal in a note. Review today.</li>
+      <li><strong>Concern</strong> — a sustained pattern, several domains low at
+        once, or two difficult guardian pulse weeks. Review this week.</li>
+      <li><strong>Watch</strong> — a downward trend, one domain below the child's
+        own usual range, or a gap in recent entries. Keep an eye on it.</li>
+    </ul>
+    <p class="muted small">
+      Tiers are not a clinical triage. They order attention; a person decides what
+      happens next.
+    </p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}{{ alert.title }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ queue_url }}">Alerts</a>
+  <span aria-hidden="true">/</span>
+  <span>Alert {{ alert.pk }}</span>
+</nav>
+
+<header class="detail-head">
+  <span class="avatar avatar-lg" aria-hidden="true">{{ alert.child.avatar }}</span>
+  <div class="detail-meta">
+    <p class="eyebrow">
+      <span class="badge tier-{{ alert.tier }}">{{ alert.get_tier_display }}</span>
+      <span class="badge badge-{{ alert.status }}">{{ alert.get_status_display }}</span>
+      <span class="muted small">{{ rule_label }}</span>
+    </p>
+    <h1>{{ alert.title }}</h1>
+    <p class="muted">
+      About <a href="{{ child_url }}">{{ alert.child.full_name }}</a> ·
+      opened {{ alert.opened_on|date:"j M Y" }} ·
+      last seen {{ alert.last_seen_on|date:"j M Y" }} ({{ alert.occurrences }} observation{{ alert.occurrences|pluralize }})
+    </p>
+  </div>
+</header>
+
+{% if is_urgent %}
+  <div class="flash flash-error">
+    <strong>Urgent — do not share this through the portal.</strong>
+    Follow the school's safeguarding procedure and speak to the designated lead
+    and the family directly. This alert is never auto-notified or shareable, and
+    its evidence contains no quoted text from a child's note.
+  </div>
+{% endif %}
+
+{% if alert.guardian_shared_at %}
+  <div class="flash flash-info">
+    Shared with the child's guardian on
+    {{ alert.guardian_shared_at|date:"j M Y, H:i" }}. Internal case notes below
+    remain private to the care team.
+  </div>
+{% endif %}
+
+<div class="two-col section">
+  <article class="card">
+    <h2>Why this alert exists</h2>
+    <p>{{ alert.summary }}</p>
+
+    <h3>Evidence</h3>
+    {% if evidence_items %}
+      <dl class="stat-list">
+        {% for item in evidence_items %}
+          <div>
+            <dt>{{ item.label }}</dt>
+            <dd>{{ item.value }}</dd>
+          </div>
+        {% endfor %}
+      </dl>
+    {% else %}
+      <p class="muted">No structured evidence recorded.</p>
+    {% endif %}
+    <p class="muted small footnote">
+      Evidence is the numbers behind the decision at the time it was made. Alert
+      text is generated; it never contains a quotation from a child's free-text
+      note.
+    </p>
+  </article>
+
+  <article class="card">
+    <h2>Case details</h2>
+    <dl class="stat-list">
+      <div><dt>Owner</dt><dd>{% if alert.assigned_to %}{{ alert.assigned_to.display_name }}{% else %}Unassigned{% endif %}</dd></div>
+      <div><dt>Opened by</dt><dd>{{ alert.get_status_display }} · rule key <code>{{ alert.rule_key }}</code></dd></div>
+      <div><dt>Period end</dt><dd>{{ alert.period_end|date:"j M Y" }}</dd></div>
+      {% if alert.acknowledged_at %}
+        <div><dt>Acknowledged</dt><dd>{{ alert.acknowledged_at|date:"j M Y, H:i" }} by {{ alert.acknowledged_by.display_name|default:"—" }}</dd></div>
+      {% endif %}
+      {% if alert.resolved_at %}
+        <div><dt>Closed</dt><dd>{{ alert.resolved_at|date:"j M Y, H:i" }} by {{ alert.resolved_by.display_name|default:"—" }}</dd></div>
+      {% endif %}
+    </dl>
+
+    {% if alert.resolution_note %}
+      <h3>Resolution</h3>
+      <p>{{ alert.resolution_note }}</p>
+    {% endif %}
+
+    <h3>Related</h3>
+    <p class="action-row">
+      <a class="btn btn-quiet btn-sm" href="{{ history_url }}">Weekly pulse history</a>
+      <a class="btn btn-quiet btn-sm" href="{{ child_url }}">Child profile</a>
+    </p>
+  </article>
+</div>
+
+{% if can_manage %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Actions</h2>
+      <span class="pill">A person decides</span>
+    </div>
+
+    <div class="action-grid">
+      {% if alert.status == 'open' %}
+        <form method="post" class="card">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="acknowledge">
+          <h3>Take ownership</h3>
+          <p class="muted small">Acknowledge that you have seen this and are the person looking into it.</p>
+          <button class="btn btn-primary" type="submit">Acknowledge</button>
+        </form>
+      {% endif %}
+
+      <form method="post" class="card">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="note">
+        <h3>Add a case note</h3>
+        <label class="field-label" for="note-body">What did you do or notice?</label>
+        <textarea id="note-body" name="body" rows="3" maxlength="2000"
+                  placeholder="A fact, a conversation, a next step. Not a copy of the child's note."></textarea>
+        <button class="btn btn-quiet" type="submit">Add note</button>
+      </form>
+
+      {% if alert.is_open %}
+        <form method="post" class="card">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="resolve">
+          <h3>Resolve</h3>
+          <label class="field-label" for="resolve-body">What resolved it?</label>
+          <textarea id="resolve-body" name="body" rows="3" maxlength="2000" required></textarea>
+          <button class="btn btn-primary" type="submit">Resolve alert</button>
+        </form>
+
+        <form method="post" class="card">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="dismiss">
+          <h3>Dismiss</h3>
+          <p class="muted small">Use this when the rule fired but a person has checked and found nothing to act on. The reason is part of the record.</p>
+          <label class="field-label" for="dismiss-body">Why is this not a concern?</label>
+          <textarea id="dismiss-body" name="body" rows="3" maxlength="2000" required></textarea>
+          <button class="btn btn-quiet" type="submit">Dismiss alert</button>
+        </form>
+      {% endif %}
+
+      {% if can_share %}
+        <form method="post" class="card">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="share">
+          <h3>Share with guardian</h3>
+          <p class="muted small">
+            This makes the alert title and summary visible to the child's guardian.
+            Case notes stay private. Urgent alerts cannot be shared here.
+          </p>
+          <button class="btn btn-quiet" type="submit">Share with guardian</button>
+        </form>
+      {% endif %}
+    </div>
+  </section>
+{% endif %}
+
+<section class="section">
+  <div class="section-head">
+    <h2>Case timeline</h2>
+    <span class="pill">Append-only</span>
+  </div>
+
+  <ol class="timeline">
+    {% for event in events %}
+      <li class="timeline-item">
+        <span class="timeline-dot" aria-hidden="true"></span>
+        <div class="timeline-body">
+          <p class="timeline-meta">
+            <strong>{{ event.get_kind_display }}</strong>
+            · {{ event.created_at|date:"j M Y, H:i" }}
+            {% if event.actor %}· {{ event.actor.display_name }}{% else %}· system{% endif %}
+          </p>
+          {% if can_note and event.body %}
+            <p>{{ event.body }}</p>
+          {% elif event.kind == 'opened' or event.kind == 'shared' or event.kind == 'acknowledged' %}
+            <p>{{ event.body }}</p>
+          {% elif not can_note %}
+            <p class="muted small">Case note content is not available to your role.</p>
+          {% endif %}
+        </div>
+      </li>
+    {% empty %}
+      <li class="muted">No timeline entries.</li>
+    {% endfor %}
+  </ol>
+</section>
+{% endblock %}

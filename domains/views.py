@@ -29,6 +29,8 @@ from core.mixins import ChildScopedMixin
 from core.models import AuditLog, Role
 from core.permissions import Access, Resource
 
+from alerts import safeguarding
+
 from . import access
 from .forms import EmotionalCheckinForm, EmotionalObservationForm
 from .models import EmotionalCheckin, Source
@@ -48,6 +50,28 @@ def _module_or_404(key: str):
     if module is None:
         raise Http404("Unknown wellness domain.")
     return module
+
+
+def _screen_note(request, child, note, resource, entry) -> None:
+    """Route a note through safeguarding screening after it is saved.
+
+    The note is already stored under its domain's access rule; this only asks
+    whether an urgent alert should exist. A child is never told that their words
+    were screened: the response would punish honesty faster than it protects them.
+    """
+    alerts = safeguarding.screen_request(
+        request,
+        child,
+        note,
+        source_resource=resource,
+        entry_id=getattr(entry, "pk", ""),
+    )
+    if alerts and request.user.role != Role.CHILD:
+        messages.info(
+            request,
+            "The note was also passed to the designated safeguarding lead for "
+            "review. The note itself was not copied into the alert.",
+        )
 
 
 def _stats_for(user, child, module, mode) -> list[dict]:
@@ -246,6 +270,13 @@ class DomainEntryCreateView(ChildScopedMixin, View):
                 action = AuditLog.Action.UPDATE
 
         entry.save()
+        _screen_note(
+            request,
+            self.child,
+            form.cleaned_data.get("note", ""),
+            self.module.resource,
+            entry,
+        )
 
         record_request(
             request,
@@ -332,6 +363,13 @@ class EmotionalObservationCreateView(ChildScopedMixin, View):
             note = "Observation recorded."
 
         entry.save()
+        _screen_note(
+            request,
+            self.child,
+            form.cleaned_data.get("note", ""),
+            Resource.EMOTIONAL_OBSERVATION,
+            entry,
+        )
 
         record_request(
             request,
@@ -418,6 +456,13 @@ class ChildCheckinView(LoginRequiredMixin, View):
             AuditLog.Action.UPDATE if entry.pk is not None else AuditLog.Action.CREATE
         )
         entry.save()
+        _screen_note(
+            request,
+            self.child,
+            form.cleaned_data.get("note", ""),
+            Resource.EMOTIONAL,
+            entry,
+        )
 
         record_request(
             request,

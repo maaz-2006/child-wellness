@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import connection
+from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
@@ -88,7 +89,55 @@ class DashboardView(TemplateView):
                 "mentors": User.objects.filter(role=Role.MENTOR, is_active=True).count(),
                 "parents": User.objects.filter(role=Role.PARENT, is_active=True).count(),
             }
+            context["alert_counts"] = _cohort_alert_counts()
+        elif user.role == Role.MENTOR:
+            from alerts.models import Alert
+
+            visible = context["children_visible"]
+            open_alerts = Alert.objects.filter(
+                child__in=visible,
+                status__in=[Alert.Status.OPEN, Alert.Status.ACKNOWLEDGED],
+            )
+            by_tier = {
+                row["tier"]: row["n"]
+                for row in open_alerts.values("tier").annotate(n=Count("id"))
+            }
+            context["alert_counts"] = {
+                "total": sum(by_tier.values()),
+                "urgent": by_tier.get(Alert.Tier.URGENT, 0),
+                "concern": by_tier.get(Alert.Tier.CONCERN, 0),
+                "watch": by_tier.get(Alert.Tier.WATCH, 0),
+            }
+        elif user.role == Role.PARENT:
+            from alerts.models import Alert
+            from feedback.services import children_due_for
+
+            shared = Alert.objects.filter(
+                child__in=context["children_visible"],
+                guardian_shared_at__isnull=False,
+            ).exclude(status=Alert.Status.DISMISSED)
+            context["alert_counts"] = {"shared": shared.count()}
+            context["pulse_due"] = children_due_for(user)
         return context
+
+
+def _cohort_alert_counts() -> dict:
+    """Small aggregate helper for the administrator dashboard."""
+    from alerts.models import Alert
+
+    open_alerts = Alert.objects.filter(
+        status__in=[Alert.Status.OPEN, Alert.Status.ACKNOWLEDGED]
+    )
+    by_tier = {
+        row["tier"]: row["n"]
+        for row in open_alerts.values("tier").annotate(n=Count("id"))
+    }
+    return {
+        "total": sum(by_tier.values()),
+        "urgent": by_tier.get(Alert.Tier.URGENT, 0),
+        "concern": by_tier.get(Alert.Tier.CONCERN, 0),
+        "watch": by_tier.get(Alert.Tier.WATCH, 0),
+    }
 
 
 class PermissionMatrixView(RoleRequiredMixin, TemplateView):

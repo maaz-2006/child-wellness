@@ -112,6 +112,114 @@
   </div>
 </section>
 
+{% if can_view_alerts %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Open alerts</h2>
+      <span class="pill">Named owner</span>
+    </div>
+
+    {% if alerts %}
+      <div class="stack">
+        {% for alert in alerts %}
+          <article class="card alert-row">
+            <div>
+              <p class="eyebrow">
+                <span class="badge tier-{{ alert.tier }}">{{ alert.get_tier_display }}</span>
+                <span class="badge badge-{{ alert.status }}">{{ alert.get_status_display }}</span>
+                <span class="muted small">opened {{ alert.opened_on|date:"j M" }}</span>
+              </p>
+              <h3><a href="{% url 'alerts:detail' alert.pk %}">{{ alert.title }}</a></h3>
+              <p class="muted small">
+                Owner: {% if alert.assigned_to %}{{ alert.assigned_to.display_name }}{% else %}unassigned{% endif %}
+                · seen {{ alert.occurrences }}×
+              </p>
+            </div>
+            <a class="btn btn-quiet btn-sm" href="{% url 'alerts:detail' alert.pk %}">Open case</a>
+          </article>
+        {% endfor %}
+      </div>
+      <p class="action-row">
+        <a class="btn btn-quiet" href="{{ alert_queue_url }}">Open the full queue</a>
+      </p>
+    {% else %}
+      <div class="card card-tinted">
+        <p>
+          No open alerts for this child. That means no rule is currently firing
+          on the recorded data; it does not mean the child has been assessed and
+          found well.
+        </p>
+      </div>
+    {% endif %}
+  </section>
+{% endif %}
+
+{% if can_view_shared_alerts %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Updates shared with you</h2>
+      <span class="pill">Chosen by a mentor</span>
+    </div>
+
+    {% if alerts %}
+      <div class="stack">
+        {% for alert in alerts %}
+          <article class="card">
+            <p class="eyebrow">Shared {{ alert.guardian_shared_at|date:"j M Y" }}</p>
+            <h3>{{ alert.title }}</h3>
+            <p>{{ alert.summary }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card card-tinted">
+        <p>
+          No updates have been shared with you yet. Internal scores, tiers and
+          case notes are not shown here by design; a mentor shares a summary when
+          there is something you should know.
+        </p>
+      </div>
+    {% endif %}
+  </section>
+{% endif %}
+
+{% if can_view_pulse %}
+  <section class="section">
+    <div class="section-head">
+      <h2>Guardian pulse</h2>
+      <span class="pill">From home</span>
+    </div>
+
+    {% if pulse_rows %}
+      <div class="table-wrap card">
+        <table class="table">
+          <thead>
+            <tr><th scope="col">Week of</th><th scope="col">Guardian</th><th scope="col">Child's week</th></tr>
+          </thead>
+          <tbody>
+            {% for row in pulse_rows %}
+              <tr>
+                <td class="nowrap">{{ row.week_start|date:"j M Y" }}</td>
+                <td class="nowrap">{{ row.guardian.display_name }}</td>
+                <td>{{ row.get_wellbeing_display }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted">No pulse responses yet.</p>
+    {% endif %}
+
+    <p class="action-row">
+      {% if can_submit_pulse %}
+        <a class="btn btn-primary" href="{{ pulse_url }}">Give this week's pulse</a>
+      {% endif %}
+      <a class="btn btn-quiet" href="{{ pulse_history_url }}">Pulse history</a>
+    </p>
+  </section>
+{% endif %}
+
 {% if show_care_team %}
   <section class="section">
     <div class="section-head">

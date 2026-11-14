@@ -121,6 +121,18 @@ Expected:
 
 Then open `https://Maaz2006.pythonanywhere.com/` in a browser and sign in.
 
+Useful surfaces to verify after a D5 deploy:
+
+| URL | Expected when signed out |
+|---|---|
+| `/healthz/` | JSON `status: ok`, `debug: false` |
+| `/alerts/` | redirect to sign-in (mentor queue) |
+| `/alerts/family/` | redirect to sign-in (guardian view) |
+| `/cohort/alerts/` | redirect to sign-in (admin aggregate) |
+| `/cohort/pulse/` | redirect to sign-in (admin aggregate) |
+| `/children/1/pulse/history/` | redirect to sign-in |
+| `/alerts/999999/` | 404, not a 500 |
+
 ---
 
 ## 8. Deploying later updates
@@ -134,6 +146,7 @@ git pull
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py recompute_wellness   # rebuild derived scores/baselines
+python manage.py evaluate_alerts      # run alert rules, persist findings
 python manage.py collectstatic --noinput
 ```
 
@@ -142,6 +155,26 @@ data was imported outside the web app. It is safe to run every deploy: it
 deletes and rebuilds the stored windows, and the same entries always produce the
 same numbers for a given `method_version`. The score tables are derived, so a
 missing run shows empty trends, not wrong ones.
+
+`evaluate_alerts` recomputes scores first by default and then evaluates the
+rules. It is idempotent: an alert already open for a rule is updated, not
+duplicated, and `occurrences` only increments once per day. Safe to run as often
+as you like. On the synthetic demo cohort it prints:
+
+```
+Evaluated 24 children as of <date>: 17 findings, 17 alerts
+(urgent 4, concern 13, watch 0).
+```
+
+`backtest_alerts` is an evaluation tool, not part of a deploy. It replays the
+rules over the labelled synthetic trajectories and prints precision, recall and
+median lead time; it restores the current scores when it finishes. Do not run it
+against a real cohort.
+
+Before the first alert run on the host, make sure the school has a designated
+safeguarding lead — urgent findings are assigned to that named person. Either
+set it in `/django-admin/` under **School → safeguarding lead**, or let
+`seed_demo` set one on a fresh demo database.
 
 Then **Reload** in the Web tab. Reload is required every time — changes to disk
 are not picked up by the running process.

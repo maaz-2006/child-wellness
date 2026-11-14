@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Weekly pulse · {{ child.full_name }} · {{ platform_name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <a href="{% url 'core:dashboard' %}">Dashboard</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ back_url }}">Home</a>
+  <span aria-hidden="true">/</span>
+  <span>Weekly pulse</span>
+</nav>
+
+<header class="page-head">
+  <p class="eyebrow">Guardian pulse · week of {{ week_start|date:"j M Y" }}</p>
+  <h1>How has {{ child.short_name }} been?</h1>
+  <p class="muted">
+    Two quick ratings and an optional sentence. This is your view from home,
+    which the school cannot see for itself. It takes about a minute.
+  </p>
+</header>
+
+<div class="card card-tinted">
+  <p class="small">
+    Your child's mentor can read this pulse; the administrator cannot, and the
+    scoring code never reads your comment. If you need a conversation rather
+    than a form, contact the mentor directly.
+  </p>
+</div>
+
+<form method="post" class="card form-card" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="flash flash-error">
+      {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="stack">
+    {% include "domains/_field.html" with field=form.wellbeing %}
+    {% include "domains/_field.html" with field=form.support %}
+    {% include "domains/_field.html" with field=form.comment %}
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">
+      {% if editing %}Update this week's pulse{% else %}Save this week's pulse{% endif %}
+    </button>
+    <a class="btn btn-quiet" href="{{ back_url }}">Cancel</a>
+    <a class="btn btn-quiet" href="{{ history_url }}">Pulse history</a>
+  </div>
+
+  <p class="muted small">
+    One response per guardian, per child, per week. You can change it until the
+    week ends. A second guardian in your household can give a different answer;
+    both are kept.
+  </p>
+</form>
+{% endblock %}
