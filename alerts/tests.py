@@ -211,6 +211,23 @@ class EngineTests(AlertFixture):
         self.assertEqual(Alert.objects.count(), 1)
         self.assertEqual(alert.occurrences, 2)
 
+    def test_a_resolved_alert_is_not_recreated_by_a_later_run_same_day(self):
+        finding = Finding(
+            rule_key="declining_trend",
+            tier="watch",
+            domain="overall",
+            title="Decline",
+            summary="Summary.",
+            evidence={},
+        )
+        first = engine.persist_finding(self.child, finding, self.today)
+        services.resolve(first, self.mentor, "Spoke to the family.")
+        again = engine.persist_finding(self.child, finding, self.today)
+
+        self.assertEqual(again.pk, first.pk)
+        self.assertEqual(again.status, Alert.Status.RESOLVED)
+        self.assertEqual(Alert.objects.count(), 1)
+
     def test_an_open_alert_escalates_and_does_not_downgrade(self):
         watch = Finding(
             rule_key="declining_trend",

@@ -99,6 +99,17 @@ def persist_finding(child, finding: Finding, as_of: date, actor=None) -> Alert:
     )
 
     if existing is None:
+        # A closed alert for the same rule and same day means a person already
+        # decided this. Do not reopen it from a cron run, and do not trip the
+        # (child, rule_key, period_end) uniqueness constraint by trying to insert
+        # a duplicate. The next evaluation day gets a fresh alert if the rule
+        # still fires.
+        closed_same_period = Alert.objects.filter(
+            child=child, rule_key=finding.rule_key, period_end=as_of
+        ).first()
+        if closed_same_period is not None:
+            return closed_same_period
+
         alert = Alert.objects.create(
             child=child,
             rule_key=finding.rule_key,
